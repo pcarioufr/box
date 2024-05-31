@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+
+  ubuntu:
+    container_name: box
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - ./bin:/opt/box/bin # box script launcher
+      - ./libs:/opt/box/libs # box common functions
+      - ./scripts:/opt/box/scripts # box scripts
+      - ./home:/home/ubuntu
