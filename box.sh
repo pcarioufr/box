@@ -10,6 +10,6 @@ then # opens terminal
 else # runs a script
     docker compose \
         run -it --rm \
-        ubuntu /opt/box/bin/box ${@}
+        ubuntu ./scripts/_main.sh ${@}
 
 fi
