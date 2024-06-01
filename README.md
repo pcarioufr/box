@@ -24,14 +24,15 @@ hello.sh::28 | salut la compagnie
 
 ## Add your own scripts
 
-Add scripts to the box in the [`home/scripts/`](home/scripts/) folder.
+Add scripts to the box in the [`scripts/`](scripts/) folder. They are deployed in the `/opt/box` folder in the virtual machine.
 
 Use `box acme` (or `./box.sh acme` if you did not alias the `./box.sh` command) to launch `scripts/acme.sh` script.
 
 
 ### Common functions for your `box` scripts 
 
-The [`home/scripts/libs`](home/scripts/libs) is the folder where to declare functions that would run across your scripts (see the Logs section below for reference).
+The [`scripts/libs`](scripts/libs) is the folder where to declare functions that would run across your scripts (see the Logs section below for reference). They are deployed in the `/opt/box/libs` folder in the virtual machine.
+
 
 ### Logs
 

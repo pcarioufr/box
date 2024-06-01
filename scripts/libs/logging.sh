@@ -14,7 +14,6 @@ stacktrace() {
     done
 
     trace="${trace::-1} |"
-    # trace="${trace//main/}" 
     echo ${trace}
 
 } ; export -f stacktrace
