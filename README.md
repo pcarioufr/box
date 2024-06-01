@@ -31,9 +31,7 @@ Use `box acme` (or `./box.sh acme` if you did not alias the `./box.sh` command) 
 
 ### Common functions for your `box` scripts 
 
-The [`home/scripts/_main.sh`](home/scripts/_main.sh) is the executable primarily launched [in the virtual machine] when you use the `box XYZ` (or `./box.sh XYZ`) command [on the host], where `XYZ`is the name of a script in [`home/scripts/`](home/scripts/)
-
-You may use it to declare functions that would run across your scripts (see the Logs section below for reference)
+The [`home/scripts/libs`](home/scripts/libs) is the folder where to declare functions that would run across your scripts (see the Logs section below for reference).
 
 ### Logs
 

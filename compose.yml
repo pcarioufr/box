@@ -10,3 +10,5 @@ services:
     volumes:
       - ./home:/home/ubuntu
       - ${DATA}:/data:ro
+    ports:
+      - 8000:8000

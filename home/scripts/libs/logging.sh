@@ -1,10 +1,5 @@
 #!/bin/bash
 
-if [ -n "${DEBUG}" ] ; then notice "debug mode on" ; fi 
-
-
-# LOGGING ############################################################
-
 # https://unix.stackexchange.com/questions/19323/what-is-the-caller-command
 # https://askubuntu.com/questions/678915/whats-the-difference-between-and-in-bash
 # https://stackoverflow.com/questions/918886/how-do-i-split-a-string-on-a-delimiter-in-bash
@@ -14,12 +9,12 @@ stacktrace() {
     
     while read LINE SUB FILE < <(caller "$frame"); do
         FILEa=(${FILE//// })
-        trace="${trace}${FILEa[-1]}:${SUB}:${LINE}>"
+        trace="${trace}${FILEa}:${LINE}>"
         ((frame++))
     done
 
     trace="${trace::-1} |"
-    trace="${trace//main/}" 
+    # trace="${trace//main/}" 
     echo ${trace}
 
 } ; export -f stacktrace
@@ -35,24 +30,3 @@ debug () { if [ -n "${DEBUG}" ] ; then
               GREY='\033[0;90m'   ; echo -e "${GREY}$(stacktrace) $@\033[0m"   ; 
            fi ; 
          } ; export -f debug
-
-# TESTING ############################################################
-
-assert () { 
-    if [ "$1" -eq "0" ]
-    then echo -e "${GREEN}${@:2} ok${NC}" 
-    else echo -e "${RED}${@:2} failed${NC}" 
-    fi
-} ; export -f assert
-
-###############################################################
-
-
-start_time=$(date +%s.%3N)
-
-CMD=${1} && shift 1
-debug command=$CMD
-/home/ubuntu/scripts/${CMD}.sh $@
-
-end_time=$(date +%s.%3N)
-debug "$(echo $end_time - $start_time | bc)s"

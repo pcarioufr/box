@@ -12,6 +12,6 @@ then # opens terminal
 else # runs a script
     docker compose \
         run -it --rm \
-        ubuntu ./scripts/_main.sh ${@}
+        ubuntu ./scripts/main.sh ${@}
 
 fi
