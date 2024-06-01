@@ -2,6 +2,8 @@
 
 export DATA="./data"
 export SCRIPTS="./scripts"
+export ENV=".env"
+export BUILD="build/."
 
 if [ -z "${@}" ] # empty box command
 

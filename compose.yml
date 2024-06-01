@@ -4,9 +4,9 @@ services:
 
   ubuntu:
     container_name: box
-    build: build/.
+    build: ${BUILD}
     env_file:
-      - .env
+      - ${ENV}
     volumes:
       - ./home:/home/ubuntu
       - ${SCRIPTS}:/opt/box:ro
