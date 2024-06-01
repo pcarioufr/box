@@ -67,8 +67,11 @@ Update the [`.env`](.env) file to pass environment variables to `The Box`.
 
 The virtual machine home folder for the -default- `ubuntu` user (`/home/ubuntu`) is persisted on the docker host in the [`home/`](home/) repo.
 
+Add anything you need there (scripts, .bashrc, ssh keys, etc.).
+
+
 ## Upgrade
 
-See [`Dockerfile`](Dockerfile) to change the Ubuntu Version as well as packages installed for `The Box`. 
+See [`Dockerfile`](Dockerfile) to change the Ubuntu Version, packages installed, configuration files, etc. 
 
 
