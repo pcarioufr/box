@@ -34,11 +34,11 @@ Use `box acme` (or `./box.sh acme` if you did not alias the `./box.sh` command) 
 
 The [`home/scripts/_main.sh`](home/scripts/_main.sh) is the executable primarily launched [in the virtual machine] when you use the `box XYZ` (or `./box.sh XYZ`) command [on the host], where `XYZ`is the name of a script in [`home/scripts/`](home/scripts/)
 
-You may use it to declare functions that would run across your scripts.
+You may use it to declare functions that would run across your scripts (see the Logs section below for reference)
 
 ### Logs
 
-You may use following commands (see `libs/verbose.sh` file) to add fancy colored logs.
+Use following commands to add fancy colored logs.
 * `critical` -> dark red logs
 * `error` -> red logs
 * `warning` -> orange logs
