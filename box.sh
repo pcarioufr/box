@@ -1,5 +1,7 @@
 #!/bin/sh
 
+export DATA="./data"
+
 if [ -z "${@}" ] # empty box command
 
 then # opens terminal

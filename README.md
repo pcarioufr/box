@@ -12,7 +12,6 @@ I personally use it as a dev-tool box (adding scripts that wrap terraform, ssh, 
 If you don't have docker installed, I recommend [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 
 
-
 ## Hello world!
 
 Run the `alias` command [on the host] to use `box` in lieu of `./box.sh` - this alias persists as long as your terminal window/tab remains open.
@@ -62,6 +61,14 @@ Alternatively, use the `box` (or `./box.sh` if you did not alias the `./box.sh` 
 ## Environment variables
 
 Update the [`.env`](.env) file to pass environment variables to `The Box`.
+
+
+## External Data 
+
+You can mount a read-only folder to access external data from within the virtual machine. It defaults to `./data`.
+
+Update the [`box.sh`](box.sh) file and its `DATA` environment variable to point to another data folder to be mounted in the virtual machine.
+
 
 ## Home folder
 

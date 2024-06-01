@@ -9,3 +9,4 @@ services:
       - .env
     volumes:
       - ./home:/home/ubuntu
+      - ${DATA}:/data:ro
