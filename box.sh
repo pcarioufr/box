@@ -1,6 +1,7 @@
 #!/bin/sh
 
 export DATA="./data"
+export SCRIPTS="./scripts"
 
 if [ -z "${@}" ] # empty box command
 

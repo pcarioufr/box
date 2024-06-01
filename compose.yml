@@ -9,7 +9,5 @@ services:
       - .env
     volumes:
       - ./home:/home/ubuntu
-      - ./scripts:/opt/box
+      - ${SCRIPTS}:/opt/box:ro
       - ${DATA}:/data:ro
-    ports:
-      - 8000:8000

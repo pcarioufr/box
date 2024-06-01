@@ -14,44 +14,31 @@ If you don't have docker installed, I recommend [Docker Desktop](https://www.doc
 
 ## Hello world!
 
+```bash
+$ ./box.sh hello -l french
+hello.sh::28 | salut la compagnie !
+```
+
+## `The Box` entry points
+
 Run the `alias` command [on the host] to use `box` in lieu of `./box.sh` - this alias persists as long as your terminal window/tab remains open.
 
 ```bash
-$ alias box=./box.sh
-$ box hello -l french
-hello.sh::28 | salut la compagnie
+$ ./box.sh alias box=./box.sh
+$ box hello
+hello.sh::28 | hello world!
 ```
 
-## Add your own scripts
+### Launch scripts 
 
-Add scripts to the box in the [`scripts/`](scripts/) folder. They are deployed in the `/opt/box` folder in the virtual machine.
-
+[`scripts/main.sh`](script/smain.sh) is expected to be the entry point (see [`box.sh`](box.sh) command line).
+ 
 Use `box acme` (or `./box.sh acme` if you did not alias the `./box.sh` command) to launch `scripts/acme.sh` script.
 
 
-### Common functions for your `box` scripts 
+### Open a terminal in `The Box`
 
-The [`scripts/libs`](scripts/libs) is the folder where to declare functions that would run across your scripts (see the Logs section below for reference). They are deployed in the `/opt/box/libs` folder in the virtual machine.
-
-
-### Logs
-
-Use following commands to add fancy colored logs.
-* `critical` -> dark red logs
-* `error` -> red logs
-* `warning` -> orange logs
-* `notice` -> purple logs
-* `info` -> cyan logs
-* `success` -> green logs
-
-Debug mode (`DEBUG=1` environment variable in [`.env`](.env) file) adds: 
-* `debug` -> grey logs
-* a final debug line that tracks the execution time of the script
-
-
-## Open a terminal in The Box
-
-Alternatively, use the `box` (or `./box.sh` if you did not alias the `./box.sh` command) to open a terminal in the virtual machine.
+Alternatively, use the `box` with no further argument to open a terminal in the virtual machine.
 
 
 # Customise `The Box`
@@ -62,11 +49,18 @@ Alternatively, use the `box` (or `./box.sh` if you did not alias the `./box.sh` 
 Update the [`.env`](.env) file to pass environment variables to `The Box`.
 
 
+## Bring your own scripts
+
+Scripts are deployed in the `/opt/box` read-only folder in the virtual machine.
+  
+The scripts folder defaults to `./scripts`. Update the [`box.sh`](box.sh) file and its `SCRIPTS` environment variable to point to another scripts folder to be mounted in the virtual machine. If you do so, you may want to change the `/opt/box/main.sh` entrypoint in [`box.sh`](box.sh).
+
+
 ## External Data 
 
-You can mount a read-only folder to access external data from within the virtual machine. It defaults to `./data`.
+External data is deployed in the `/data` folder in the virtual machine. 
 
-Update the [`box.sh`](box.sh) file and its `DATA` environment variable to point to another data folder to be mounted in the virtual machine.
+It defaults to `./data`. Update the [`box.sh`](box.sh) file and its `DATA` environment variable to point to another data folder to be mounted in the virtual machine.
 
 
 ## Home folder
