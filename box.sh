@@ -1,9 +1,10 @@
 #!/bin/sh
 
-export DATA="./data"
-export SCRIPTS="./scripts"
-export ENV=".env"
-export BUILD="build/."
+ROOT="./"
+export DATA="${ROOT}data"
+export SCRIPTS="${ROOT}scripts"
+export ENV="${ROOT}.env"
+export BUILD="${ROOT}build"
 
 if [ -z "${@}" ] # empty box command
 
