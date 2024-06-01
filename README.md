@@ -32,7 +32,7 @@ Use `box acme` (or `./box.sh acme` if you did not alias the `./box.sh` command) 
 
 ### Common functions for your `box` scripts 
 
-The [`home/scripts/_main.sh`][home/scripts/_main.sh] is the executable primarily launched [in the virtual machine] when you use the `box XYZ` (or `./box.sh XYZ`) command [on the host], where `XYZ`is the name of a script in [`home/scripts/`][home/scripts/]
+The [`home/scripts/_main.sh`](home/scripts/_main.sh) is the executable primarily launched [in the virtual machine] when you use the `box XYZ` (or `./box.sh XYZ`) command [on the host], where `XYZ`is the name of a script in [`home/scripts/`](home/scripts/)
 
 You may use it to declare functions that would run across your scripts.
 
@@ -46,7 +46,7 @@ You may use following commands (see `libs/verbose.sh` file) to add fancy colored
 * `info` -> cyan logs
 * `success` -> green logs
 
-Debug mode (`DEBUG=1` environment variable in [`.env`][.env] file) adds: 
+Debug mode (`DEBUG=1` environment variable in [`.env`](.env) file) adds: 
 * `debug` -> grey logs
 * a final debug line that tracks the execution time of the script
 
@@ -61,11 +61,11 @@ Alternatively, use the `box` (or `./box.sh` if you did not alias the `./box.sh` 
 
 ## Environment variables
 
-Update the [`.env`][.env] file to pass environment variables to `The Box`.
+Update the [`.env`](.env) file to pass environment variables to `The Box`.
 
 ## Home folder
 
-The virtual machine home folder for the -default- `ubuntu` user (`/home/ubuntu`) is persisted on the docker host in the [`home/`][home/] repo.
+The virtual machine home folder for the -default- `ubuntu` user (`/home/ubuntu`) is persisted on the docker host in the [`home/`](home/) repo.
 
 ## Upgrade
 
