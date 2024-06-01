@@ -7,6 +7,12 @@ Since `The Box` runs as a short-lived container, nothing that happens in the box
 I personally use it as a dev-tool box (adding scripts that wrap terraform, ssh, etc.) commands. But it's also a convenient way to sandbox ubuntu stuff.
 
 
+## Install Docker
+
+If you don't have docker installed, I recommend [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+
+
+
 ## Hello world!
 
 Run the `alias` command [on the host] to use `box` in lieu of `./box.sh` - this alias persists as long as your terminal window/tab remains open.
