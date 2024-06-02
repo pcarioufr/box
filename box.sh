@@ -1,17 +1,10 @@
 #!/bin/sh
 
-# ROOT="./"
-# export DATA="${ROOT}data"
-# export SCRIPTS="${ROOT}scripts"
-# export ENV="${ROOT}.env"
-# export BUILD="${ROOT}build"
-
-# SANDBOX
-ROOT="../sandbox"
-export DATA="${ROOT}"
-export SCRIPTS="${ROOT}/box/scripts"
-export ENV="${ROOT}/box/.env"
-export BUILD="${ROOT}/box/build"
+ROOT="./"
+export DATA="${ROOT}data"
+export SCRIPTS="${ROOT}scripts"
+export ENV="${ROOT}.env"
+export BUILD="${ROOT}build"
 
 usage() {
     echo "----------------- box -----------------" 

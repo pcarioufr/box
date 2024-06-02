@@ -6,6 +6,6 @@ services:
     env_file:
       - ${ENV}
     volumes:
-      - ./home:/home/ubuntu
+      - ./home:/home/box
       - ${SCRIPTS}:/opt/box:ro
       - ${DATA}:/data:ro
