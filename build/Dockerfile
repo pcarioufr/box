@@ -14,17 +14,16 @@ RUN apt install -y -qq \
     lsb-release \
     jq bc
 
-    # Create box user
+
+# Create box user
 ENV USERNAME=box
-ENV USER_UID=1001
-ENV GROUPNAME=box
-ENV USER_GID=1001
-RUN groupadd --gid $USER_GID $GROUPNAME \
-    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
-    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
-    && chmod 0440 /etc/sudoers.d/$USERNAME
+
+RUN useradd -g users -G sudo -m $USERNAME -d /home/$USERNAME
+RUN echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME
+RUN chmod 0440 /etc/sudoers.d/$USERNAME
+RUN usermod --shell /bin/bash $USERNAME
 
 USER $USERNAME
-RUN chown --recursive $USERNAME:$USERNAME /home/$USERNAME
+# RUN chown --recursive $USERNAME:$USERNAME /home/$USERNAME
 
-WORKDIR /home/box
+WORKDIR /home/$USERNAME
