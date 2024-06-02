@@ -7,6 +7,6 @@ services:
     env_file:
       - ${ENV}
     volumes:
-      - ./home:/home/box
+      - ./home:/home/me
       - ${SCRIPTS}:/opt/box:ro
       - ${DATA}:/data:ro
