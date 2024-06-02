@@ -10,9 +10,11 @@ export BUILD="${ROOT}build"
 usage() {
     echo "----------------- box -----------------" 
     echo "A wrapper on docker for The Box" 
-    echo "hello [-h] [-l language] command"
-    echo "    -h (opt)    : this helper"
-    echo "    -b (opt)    : (re)build The Box docker image"
+    echo "hello [-h] [-b] command (opt)"
+    echo "    -h (opt)      : this helper"
+    echo "    -b (opt)      : (re)build The Box docker image"
+    echo "    command (opt) : command to pass to the box entry script"
+    echo "                    passing no command opens a bash script"
 }
 
 while getopts "hb" option; do
