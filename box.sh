@@ -38,8 +38,7 @@ then # build command
     exit 0
 fi
 
-
-if [ -z "${@}" ] # empty box command
+if [ -z "${*}" ] # empty command line
 
 then # opens terminal
     docker compose \
