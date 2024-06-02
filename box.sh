@@ -6,6 +6,31 @@ export SCRIPTS="${ROOT}scripts"
 export ENV="${ROOT}.env"
 export BUILD="${ROOT}build"
 
+
+usage() {
+    echo "----------------- box -----------------" 
+    echo "A wrapper on docker for The Box" 
+    echo "hello [-h] [-l language] command"
+    echo "    -h (opt)    : this helper"
+    echo "    -b (opt)    : (re)build The Box docker image"
+}
+
+while getopts "hb" option; do
+case ${option} in
+    h) usage && exit 0 ;;
+    b) _b=1 ;;
+    *) usage && exit 1 ;;
+    esac
+done
+shift $(($OPTIND-1))
+
+if [ -n "_b" ] # empty box command
+then # opens terminal
+    docker compose build ubuntu
+    exit 0
+fi
+
+
 if [ -z "${@}" ] # empty box command
 
 then # opens terminal
