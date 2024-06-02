@@ -2,6 +2,7 @@ services:
 
   ubuntu:
     container_name: box
+    hostname: box
     build: ${BUILD}
     env_file:
       - ${ENV}

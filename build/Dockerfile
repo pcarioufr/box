@@ -24,6 +24,4 @@ RUN chmod 0440 /etc/sudoers.d/$USERNAME
 RUN usermod --shell /bin/bash $USERNAME
 
 USER $USERNAME
-# RUN chown --recursive $USERNAME:$USERNAME /home/$USERNAME
-
 WORKDIR /home/$USERNAME
