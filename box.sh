@@ -1,11 +1,17 @@
 #!/bin/sh
 
-ROOT="./"
-export DATA="${ROOT}data"
-export SCRIPTS="${ROOT}scripts"
-export ENV="${ROOT}.env"
-export BUILD="${ROOT}build"
+# ROOT="./"
+# export DATA="${ROOT}data"
+# export SCRIPTS="${ROOT}scripts"
+# export ENV="${ROOT}.env"
+# export BUILD="${ROOT}build"
 
+# SANDBOX
+ROOT="../sandbox"
+export DATA="${ROOT}"
+export SCRIPTS="${ROOT}/box/scripts"
+export ENV="${ROOT}/box/.env"
+export BUILD="${ROOT}/box/build"
 
 usage() {
     echo "----------------- box -----------------" 
@@ -26,8 +32,8 @@ case ${option} in
 done
 shift $(($OPTIND-1))
 
-if [ -n "_b" ] # empty box command
-then # opens terminal
+if [ -n "${_b}" ] # -b option
+then # build command
     docker compose build ubuntu
     exit 0
 fi
