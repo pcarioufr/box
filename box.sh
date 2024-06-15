@@ -31,7 +31,7 @@ if [ -z "${*}" ] # empty command line
 
 then # opens terminal
     docker compose \
-        run -it --rm -e "TERM=xterm-256color" \
+        run -it --rm \
         ubuntu /bin/bash
 
 else # runs a script

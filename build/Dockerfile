@@ -2,6 +2,7 @@ FROM ubuntu:24.04
 
 ENV TZ=Europe/Paris
 ENV DEBIAN_FRONTEND=noninteractive
+ENV TERM=xterm-256color
 
 RUN apt update
 RUN apt upgrade -y -qq
