@@ -16,7 +16,7 @@ RUN apt install -y -qq \
 
 
 # Create box user
-ENV USERNAME=box
+ENV USERNAME=me
 
 RUN useradd -g users -G sudo -m $USERNAME -d /home/$USERNAME
 RUN echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME
