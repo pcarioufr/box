@@ -3,10 +3,10 @@ services:
   ubuntu:
     container_name: box
     hostname: box
-    build: ${BUILD}
+    build: ${BOX}/build
     env_file:
-      - ${ENV}
+      - ${BOX}/.env
     volumes:
-      - ./home:/home/me
-      - ${SCRIPTS}:/opt/box:ro
-      - ${DATA}:/data:ro
+      - ${BOX}/home:/home/me
+      - ${BOX}/opt:/opt/box:ro
+      - ${DATA}:/data

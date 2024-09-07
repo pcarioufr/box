@@ -19,7 +19,16 @@ $ ./box.sh hello -l french
 hello.sh::28 | salut la compagnie !
 ```
 
-## `The Box` entry points
+## Open a terminal in `The Box`
+
+Alternatively, use the `box` with no further argument to open a terminal in the virtual machine.
+
+```bash
+$ ./box.sh 
+me@box:~ *$*
+```
+
+## Alias `The Box` entry points
 
 Run the `alias` command [on the host] to use `box` in lieu of `./box.sh`.
 
@@ -32,50 +41,29 @@ hello.sh::28 | hello world!
 This alias persists as long as your terminal window/tab remains open.
 
 
-### Launch scripts 
-
-[`scripts/main.sh`](script/smain.sh) is expected to be the entry point (see [`box.sh`](box.sh) command line).
- 
-If you stick to default scripts (see [Bring your own scripts](#bring-your-own-scripts) section), use `box acme` to launch `scripts/acme.sh` script.
-
-
-### Open a terminal in `The Box`
-
-Alternatively, use the `box` with no further argument to open a terminal in the virtual machine.
-
-
 # Customise `The Box`
 
-## Home folder
-
-The virtual machine home folder for the -default- `ubuntu` user (`/home/ubuntu`) is persisted on the docker host in the [`home/`](home/) repo.
-
-Add anything you need there (scripts, .bashrc, ssh keys, etc.).
+## Bring you own scripts
 
 
-## Environment variables
+The box comes with a starter pack, which consists of:
 
-Environment variables in the virtual machine are defined in a file on the host.
+* a docker build folder - see [`starter-pack/build`](starter-pack/build),
+* a home folder - see [`starter-pack/home`](starter-pack/home)
+* some basic scripts - see [`starter-pack/opt`](starter-pack/opt)
+* environment variables to set within the virtual machine - see see [`starter-pack/.env`](starter-pack/.env)
 
-This files defaults to the [`.env`](.env). Edit its content, or update `ENV` environment variable in [`box.sh`](box.sh) to point to another environment variable file.
+You may either customise the `starter-pack/` folder.
 
-
-## Bring your own scripts
-
-Scripts are deployed in the `/opt/box` read-only folder in the virtual machine.
-  
-The scripts folder defaults to `./scripts`. Edit its content, or update `SCRIPTS` environment variable in [`box.sh`](box.sh) to point to another scripts folder to be mounted in the virtual machine. If you do so, you may want to change the `/opt/box/main.sh` entrypoint in [`box.sh`](box.sh).
-
-
-## External Data 
-
-External data is deployed in the `/data` folder in the virtual machine. 
-
-It defaults to `./data`. Edit its content, or update the `DATA` environment variable in [`box.sh`](box.sh) to point to another data folder to be mounted in the virtual machine.
+You may also point to another repository, updating the `BOX` variable in the [host.env](host.env) file. If you do so, and unless you update the [box.sh](box.sh) and [compose.yml](compose.yml) file, stick to the structure of the folder, most specifically:
+* the docker build context should be in the `$BOX/build` folder
+* the home folder should be in the `$BOX/home` folder
+* the various scripts should be in `$BOX/opt` folder, with a `$BOX/opt/main` executable file that process box parameters and calls subsequent scripts.
 
 
-## Upgrade
+## Bring you own data
 
-The definition of the virtual machine (the Ubuntu Version, the packages installed, etc.) is defined through a build folder with a `Dockerfile`.
+The box may also include external data, mounted in the `/data` folder in the virtual machine - (see[compose.yml](compose.yml))
 
-It defaults to [`./build`](./build). Edit its content, or update `BUILD` environment variable in [`box.sh`](box.sh) to point to another build folder.
+It defaults to `./data`, but you may update the `DATA` environment variable in [`box.sh`](box.sh) to point to another data folder on the host to be mounted in the virtual machine in `/data`. 
+

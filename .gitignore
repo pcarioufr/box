@@ -1,4 +1,4 @@
-home/*
-!home/.bashrc
+starter-pack/home/*
+!starter-pack/home/.bashrc
 
 data/
