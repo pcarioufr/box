@@ -1,0 +1,21 @@
+# Jira Library Dependencies
+# Requirements for Jira ticket fetching and processing
+
+# HTTP requests for Jira REST API v3
+requests>=2.32.0
+
+# Snowflake Dependencies
+# MCP server for Snowflake database access
+git+https://github.com/Snowflake-Labs/mcp.git
+
+# Snowflake connector with secure local storage (includes keyring for token caching)
+snowflake-connector-python[secure-local-storage]>=3.6.0
+
+# Datadog Dependencies
+# Datadog API client for RUM queries
+datadog-api-client>=2.30.0
+
+# Sync Dependencies
+# YAML parsing for sync.yaml configuration
+PyYAML>=6.0
+

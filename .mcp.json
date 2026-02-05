@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "atlassian": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.atlassian.com/v1/sse"],
+      "env": {
+        "MCP_REMOTE_STATE_DIR": "~/.config/mcp-remote/atlassian"
+      }
+    },
+    "snowflake": {
+      "command": ".venv/bin/mcp-server-snowflake",
+      "args": [
+        "--service-config-file", "./config/snowflake.yaml",
+        "--authenticator", "externalbrowser",
+        "--transport", "stdio"
+      ],
+      "env": {
+        "SNOWFLAKE_ACCOUNT": "${SNOWFLAKE_ACCOUNT}",
+        "SNOWFLAKE_USER": "${SNOWFLAKE_USER}",
+        "SNOWFLAKE_DATABASE": "${SNOWFLAKE_DATABASE}",
+        "SNOWFLAKE_WAREHOUSE": "${SNOWFLAKE_WAREHOUSE}"
+      }
+    }
+  }
+}

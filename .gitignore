@@ -1,4 +1,20 @@
-starter-pack/home/*
-!starter-pack/home/.bashrc
+.env
 
-data/
+services/ubuntu/home/*
+!services/ubuntu/home/.bashrc
+
+tmp/
+
+.venv
+__pycache__
+
+knowledge/*
+!/knowledge/.gitkeep
+
+data/*
+!/data/.gitkeep
+!/data/_sink/.gitkeep
+
+Box.code-workspace
+
+.DS_Store

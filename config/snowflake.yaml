@@ -1,0 +1,28 @@
+agent_services: []
+search_services: []
+analyst_services: []
+
+other_services:
+  object_manager: true      # basic Snowflake object ops
+  query_manager: true       # run SQL (controlled by permissions below)
+  semantic_manager: true    # discover/query Semantic Views
+
+# Allow/deny SQL statement categories the server may execute
+sql_statement_permissions:
+  - Alter: false
+  - Command: true
+  - Comment: false
+  - Commit: false
+  - Create: false
+  - Delete: false
+  - Describe: true
+  - Drop: false
+  - Insert: false
+  - Merge: false
+  - Rollback: false
+  - Select: true
+  - Transaction: false
+  - TruncateTable: false
+  - Unknown: false
+  - Update: false
+  - Use: true

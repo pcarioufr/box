@@ -1,0 +1,12 @@
+services:
+
+  ubuntu:
+    container_name: ubuntu
+    hostname: box
+    build: ./ubuntu/build
+    env_file:
+      - ./ubuntu/.env
+    volumes:
+      - ./ubuntu/home:/home/me
+      - ./ubuntu/opt:/opt/box:ro
+      - ../data:/data
