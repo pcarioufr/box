@@ -1,78 +1,29 @@
-# Overview
+# The Box
 
-`The Box` is a Ubuntu virtual machine that runs within a docker container.
+An agentic toolbox for Product Managers, designed to work with Claude Code.
 
-Since `The Box` runs as a short-lived container, nothing that happens in the box is persisted - apart from its `home` folder. Which makes it a fully controlled and easily distributed working environment.
+It combines:
+- **Skills** - Natural language interfaces for common PM tasks (analytics, document sync, PRD iteration)
+- **CLI tools** - Direct access to Datadog, Snowflake, Jira, Confluence, and Google Docs
+- **Knowledge bases** - Curated context that keeps Claude grounded in your domain
+- **Self-maintaining** - The toolbox improves itself as you use it
 
-I personally use it as a dev-tool box (adding scripts that wrap terraform, ssh, etc.) commands. But it's also a convenient way to sandbox ubuntu stuff.
+The tools run locally via `./box.sh`, with some commands optionally using a Docker container for isolation.
+
+> **Note:** This repo is public, but the `knowledge/` and `data/` directories are gitignored - they contain proprietary context specific to my work.
 
 
-## Prerequisites
-
-### Install Docker
-
-```bash
-brew install docker-desktop
-```
-
-### Install Node.js (Optional)
-
-Required for MCP servers (like Atlassian MCP) that use the `mcp-remote` proxy.
+## Setup
 
 ```bash
-brew install node
+cp env.example .env   # Add your credentials (Atlassian, Datadog, Snowflake)
+./box.sh --setup      # Create venv and install dependencies
 ```
 
+### Prerequisites
 
-## Hello world!
-
-```bash
-$ ./box.sh ubuntu hello -l french
-hello.sh::28 | salut la compagnie !
-```
-
-## Open a terminal in `The Box`
-
-Alternatively, use the `ubuntu` command with no further argument to open a terminal in the virtual machine.
-
-```bash
-$ ./box.sh ubuntu
-me@box:~ *$*
-```
-
-## Alias `The Box` entry points
-
-Run the `alias` command [on the host] to use `box` as a shortcut for `./box.sh`.
-
-```bash
-$ alias box='./box.sh'
-$ box ubuntu hello
-hello.sh::28 | hello world!
-```
-
-This alias persists as long as your terminal window/tab remains open.
-
-
-# Customise `The Box`
-
-## Bring you own scripts
-
-
-The box comes with a default configuration in the `services/ubuntu/` directory, which consists of:
-
-* a docker build folder - see [`services/ubuntu/build`](services/ubuntu/build)
-* a home folder - see [`services/ubuntu/home`](services/ubuntu/home)
-* scripts and utilities - see [`services/ubuntu/opt`](services/ubuntu/opt)
-* environment variables to set within the virtual machine - see [`services/ubuntu/.env`](services/ubuntu/.env)
-
-You can customize the ubuntu service by editing files in `services/ubuntu/` or modifying the service definition in [`services/compose.yml`](services/compose.yml).
-
-
-## Bring you own data
-
-The ubuntu service mounts the `data/` directory to `/data` inside the container - see [`services/compose.yml`](services/compose.yml).
-
-To use a different data directory, update the volume mapping in [`services/compose.yml`](services/compose.yml).
+- **Docker** (optional, for sandboxed commands): `brew install docker-desktop`
+- **Node.js** (optional, for MCP servers): `brew install node`
 
 
 # Knowledge Base
@@ -123,11 +74,4 @@ The `libs/` directory contains the underlying CLI tools accessible via `./box.sh
 - **Datadog** (`./box.sh datadog`) - Query and aggregate RUM data, create/update notebooks for Product Analytics
 
 See [libs/README.md](libs/README.md) for details, or run `./box.sh <command> --help`.
-
-## Setup
-
-```bash
-cp env.example .env   # Add your credentials (Atlassian, Datadog, Snowflake)
-./box.sh --setup      # Create venv and install dependencies
-```
 
