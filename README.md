@@ -22,8 +22,11 @@ cp env.example .env   # Add your credentials (Atlassian, Datadog, Snowflake)
 
 ### Prerequisites
 
-- **Docker** (optional, for sandboxed commands): `brew install docker-desktop`
-- **Node.js** (optional, for MCP servers): `brew install node`
+- **Python 3.11+**: `brew install python@3.11`
+- **Docker**: `brew install docker-desktop`
+- **Node.js** (for MCP servers): `brew install node`
+
+> This toolbox has been tested on macOS environments.
 
 
 # Knowledge Base
