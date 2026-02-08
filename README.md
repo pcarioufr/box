@@ -72,6 +72,21 @@ The `libs/` directory contains the underlying CLI tools accessible via `./box.sh
 - **Jira** (`./box.sh jira`) - Fetch Jira tickets with custom fields and ADF-to-text conversion
 - **Snowflake** (`./box.sh snowflake`) - Execute SQL queries with INCLUDE directives and template variables
 - **Datadog** (`./box.sh datadog`) - Query and aggregate RUM data, create/update notebooks for Product Analytics
+- **Excalidraw** (`./box.sh draw`) - Local diagram editor for architecture diagrams, wireframes, and concept sketches
 
 See [libs/README.md](libs/README.md) for details, or run `./box.sh <command> --help`.
+
+
+# Services
+
+The `services/` directory contains Docker services orchestrated via `docker-compose`:
+
+- **Excalidraw** - Collaborative canvas with REST API running at http://localhost:3000
+  - REST API for programmatic element creation/updates
+  - Real-time sync between browser UI and API via WebSocket
+  - Persistent state in `data/_excalidraw/elements.json`
+  - `./box.sh draw` - Start and open in browser
+  - `./box.sh draw new <name>` - Create new diagram file
+  - `./box.sh draw list` - List saved diagrams
+  - See [services/excalidraw/README.md](services/excalidraw/README.md) for API documentation
 

@@ -52,6 +52,7 @@ usage() {
     echo "  datadog rum aggregate    Aggregate RUM data (top N, time series)"
     echo "  datadog notebook create  Create Datadog notebook from JSON"
     echo "  datadog notebook update  Update existing Datadog notebook"
+    echo "  draw [open|api|stop]     Diagrams with Excalidraw (YAML push workflow)"
     echo ""
     echo "Quick Start:"
     echo "  ./box.sh --setup                                             # First-time setup"
@@ -62,6 +63,8 @@ usage() {
     echo "  ./box.sh confluence clean input.md -o clean.md               # Clean markdown"
     echo "  ./box.sh snowflake query analysis.sql --format json          # Execute SQL query"
     echo "  ./box.sh datadog rum query \"@type:view\" --from-time 1h      # Query RUM events"
+    echo "  ./box.sh draw                                                # Start Excalidraw"
+    echo "  ./box.sh draw api push diagram.yaml                            # Push YAML diagram"
     echo ""
     echo "For detailed help:"
     echo "  ./box.sh jira --help"
@@ -237,6 +240,93 @@ case "$COMMAND" in
         # Datadog RUM queries
         "$SHARED_VENV/bin/python" -m libs.datadog "$@"
         exit $?
+        ;;
+
+    draw)
+        # Excalidraw diagrams
+        DIAGRAMS_DIR="$SCRIPT_DIR/data/diagrams"
+        COMPOSE_FILE="$SCRIPT_DIR/services/compose.yml"
+        SUBCOMMAND="${1:-open}"
+
+        case "$SUBCOMMAND" in
+            open|"")
+                # Start excalidraw and open browser
+                info "Starting Excalidraw Canvas Server..."
+                docker compose -f "$COMPOSE_FILE" up excalidraw -d --quiet-pull 2>/dev/null
+                sleep 2
+                success "Excalidraw running at http://localhost:3000"
+                info "Opening browser..."
+                open "http://localhost:3000" 2>/dev/null || xdg-open "http://localhost:3000" 2>/dev/null || echo "Open http://localhost:3000 in your browser"
+                info ""
+                info "Claude can interact via: ./box.sh draw api <command>"
+                info "Diagrams saved to: $DIAGRAMS_DIR"
+                ;;
+            api)
+                # Auto-start container if not running
+                if ! docker compose -f "$COMPOSE_FILE" ps excalidraw --format '{{.State}}' 2>/dev/null | grep -q running; then
+                    info "Starting Excalidraw Canvas Server..."
+                    docker compose -f "$COMPOSE_FILE" up excalidraw -d --quiet-pull 2>/dev/null
+                    sleep 2
+                fi
+                # Pass to Python CLI for API operations
+                shift  # Remove 'api' from args
+                "$SHARED_VENV/bin/python" -m libs.excalidraw "$@"
+                exit $?
+                ;;
+            new)
+                NAME="${2:-diagram}"
+                mkdir -p "$DIAGRAMS_DIR"
+                FILEPATH="$DIAGRAMS_DIR/$NAME.excalidraw"
+                if [ -f "$FILEPATH" ]; then
+                    error "File already exists: $FILEPATH"
+                    exit 1
+                fi
+                cat > "$FILEPATH" << 'TEMPLATE'
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "box-cli",
+  "elements": [],
+  "appState": {
+    "gridSize": null,
+    "viewBackgroundColor": "#ffffff"
+  },
+  "files": {}
+}
+TEMPLATE
+                success "Created: $FILEPATH"
+                ;;
+            list)
+                mkdir -p "$DIAGRAMS_DIR"
+                info "Diagrams in $DIAGRAMS_DIR:"
+                ls -la "$DIAGRAMS_DIR"/*.excalidraw 2>/dev/null || info "  (none yet)"
+                ;;
+            stop)
+                info "Stopping Excalidraw..."
+                docker compose -f "$COMPOSE_FILE" stop excalidraw
+                success "Excalidraw stopped"
+                ;;
+            *)
+                echo "Usage: ./box.sh draw [open|api|new|list|stop]"
+                echo ""
+                echo "Commands:"
+                echo "  open              Start Excalidraw and open browser (default)"
+                echo "  api <cmd>         Canvas API (health, query, push, clear, yaml)"
+                echo "  new <name>        Create new .excalidraw file"
+                echo "  list              List diagrams in data/diagrams/"
+                echo "  stop              Stop Excalidraw container"
+                echo ""
+                echo "API Examples:"
+                echo "  ./box.sh draw api health                    # Check server status"
+                echo "  ./box.sh draw api query                     # List elements on canvas"
+                echo "  ./box.sh draw api push data/diagrams/arch.yaml  # Push YAML diagram"
+                echo "  ./box.sh draw api push arch.yaml --clear        # Full clear + push"
+                echo "  ./box.sh draw api clear                     # Clear all elements"
+                echo "  ./box.sh draw api yaml                      # YAML format reference"
+                exit 1
+                ;;
+        esac
+        exit 0
         ;;
 
     -h|--help|help)

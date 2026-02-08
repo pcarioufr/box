@@ -58,6 +58,62 @@ confluence:
     name: "architecture-overview"
 ```
 
+## Diagrams (Excalidraw)
+
+Create architecture diagrams, low-fidelity designs, and concept sketches using Excalidraw. The server is stateless — diagrams are authored as declarative YAML and pushed to the canvas.
+
+### CLI Commands
+
+```bash
+./box.sh draw                                    # Start Excalidraw and open browser (http://localhost:3000)
+./box.sh draw stop                               # Stop Excalidraw container
+./box.sh draw api push diagram.yaml              # Push YAML diagram (incremental)
+./box.sh draw api push diagram.yaml --clear      # Full clear + recreate
+./box.sh draw api query                          # List elements on canvas
+./box.sh draw api query -f json                  # Raw JSON output
+./box.sh draw api health                         # Check server status
+./box.sh draw api clear                          # Clear all elements
+```
+
+### Workflow
+
+1. **Author**: Write a `.yaml` diagram file (shapes, texts, connectors)
+2. **Push**: `./box.sh draw api push diagram.yaml` — elements appear in the browser
+3. **Iterate**: Edit the YAML, push again — only changed elements are updated
+4. **View**: Open http://localhost:3000 to see the diagram in Excalidraw UI
+
+**Push early and often.** When building a diagram, push intermediate states as you go — don't wait until the diagram is "complete". The user has the canvas open in their browser and can see updates in real-time. Pushing progressively lets them watch the diagram take shape and course-correct early (e.g., "move that box to the right", "wrong grouping"). A good rhythm: push after laying out the first few shapes, then after adding connectors, then after labels/styling.
+
+### YAML Format
+
+```yaml
+shapes:
+  - id: auth
+    type: rectangle                  # rectangle | ellipse | diamond
+    pos: [100, 100, 200x100]        # [x, y, WIDTHxHEIGHT]
+    label: "Auth Service"
+    color: {bg: "#a5d8ff"}
+texts:
+  - text: "Architecture Overview"
+    pos: [200, 30]
+connectors:
+  - type: arrow                      # arrow | line
+    from: auth                       # references shape id
+    to: db
+    label: "queries"
+```
+
+Defaults: fillStyle=solid, strokeColor=#1e1e1e, strokeWidth=2, fontSize=16 (labels) / 20 (text), fontFamily=Virgil.
+
+### State Tracking
+
+Each YAML file has a sibling `.state.json` that maps YAML IDs to server-assigned Excalidraw IDs. This enables incremental updates. If the server restarts (losing in-memory state), the CLI detects stale mappings and automatically falls back to a full push.
+
+### Output Location
+
+- YAML diagrams → anywhere in `data/` (e.g., `data/diagrams/*.yaml`)
+- State files → sibling `.state.json` next to each YAML
+
 ## Working Folders
 
 All data work is organized in date-based working folders under `data/`:
@@ -77,6 +133,7 @@ For detailed working folder conventions (naming, when to create vs continue, mas
 
 - `services/` - Service definitions (containers, workers, servers)
   - `services/ubuntu/` - Ubuntu service (build, home, opt, .env, box.sh)
+  - `services/excalidraw` - Excalidraw diagram editor (official Docker image)
   - `services/compose.yml` - Docker Compose orchestration file
 - `libs/` - Shared code libraries (Python, etc.)
   - `libs/jira/` - Jira API tools (ticket fetching, ADF conversion)
@@ -86,6 +143,7 @@ For detailed working folder conventions (naming, when to create vs continue, mas
   - `data/sync.yaml` - Sync configuration for Google Docs and Confluence
   - `data/_google/` - Default output for synced Google Docs
   - `data/_confluence/` - Default output for synced Confluence pages
+  - `data/diagrams/` - Excalidraw diagrams (.excalidraw files)
 - `knowledge/` - Curated knowledge bases for skills
   - `knowledge/general.md` - Domain knowledge about the company, business, product area, competition, etc.
   - `knowledge/pa/` - Product Analytics knowledge (RUM patterns, Snowflake model, Jira fields, notebooks)

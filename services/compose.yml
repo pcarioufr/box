@@ -10,3 +10,13 @@ services:
       - ./ubuntu/home:/home/me
       - ./ubuntu/opt:/opt/box:ro
       - ../data:/data
+
+  excalidraw:
+    build: ./excalidraw
+    container_name: excalidraw
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./excalidraw/src:/app/src:ro
+      - ./excalidraw/frontend:/frontend:ro
+    restart: unless-stopped

@@ -342,6 +342,7 @@ If the user asks to publish or share:
 5. **Mind the bucket limits:** RUM aggregates cap at 1,000 buckets (see knowledge base)
 6. **Document everything:** Update `master.md` after each investigation
 7. **Only publish when asked:** Don't proactively create notebooks
+8. **Visualize with Excalidraw:** When findings would benefit from a diagram (architecture, data flows, feature maps), use `./box.sh draw api push diagram.yaml` to create visual summaries. See CLAUDE.md for the YAML format.
 
 ## Getting Help
 

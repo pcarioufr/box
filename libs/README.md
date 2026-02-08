@@ -142,6 +142,46 @@ This repository uses a **unified runner pattern**: All libraries are accessed th
 
 ---
 
+### Excalidraw Library (`excalidraw/`)
+
+**Purpose**: CLI and API client for the Excalidraw Canvas Server. Diagrams are authored as declarative YAML and pushed to a stateless in-memory server.
+
+```bash
+./box.sh draw api push diagram.yaml         # Push YAML diagram (incremental)
+./box.sh draw api push diagram.yaml --clear  # Full clear + recreate
+./box.sh draw api query                      # List elements on canvas
+./box.sh draw api query -f json              # Raw JSON output
+./box.sh draw api health                     # Check server status
+./box.sh draw api clear                      # Clear all elements
+```
+
+**YAML format**:
+```yaml
+shapes:
+  - id: auth
+    type: rectangle
+    pos: [100, 100, 200x100]
+    label: "Auth Service"
+    color: {bg: "#a5d8ff"}
+texts:
+  - text: "Title"
+    pos: [200, 30]
+connectors:
+  - type: arrow
+    from: auth
+    to: db
+```
+
+**Features**:
+- Declarative YAML diagrams with incremental push via `.state.json` tracking
+- Stale state detection (auto-fallback to full push after server restart)
+- Arrow geometry computed from shape positions (center-to-center, edge-clipped)
+- Real-time sync to browser via WebSocket
+
+**Documentation**: [services/excalidraw/README.md](../services/excalidraw/README.md)
+
+---
+
 ### Common Library (`common/`)
 
 **Purpose**: Shared utilities used by multiple libraries
