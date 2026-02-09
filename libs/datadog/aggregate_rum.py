@@ -65,6 +65,14 @@ def parse_time(time_str: str) -> int:
     raise ValueError(f"Invalid time format: {time_str}")
 
 
+def apply_app_filter(query: str) -> str:
+    """Append @application.id filter from DD_RUM_APP_ID if set and not already in query."""
+    app_id = os.getenv("DD_RUM_APP_ID")
+    if app_id and "@application.id:" not in query:
+        query = f"{query} @application.id:{app_id}"
+    return query
+
+
 def aggregate_rum_data(
     query: str,
     from_time: str,
@@ -103,6 +111,9 @@ def aggregate_rum_data(
             "Missing Datadog credentials. Set DD_API_KEY and DD_APP_KEY environment variables.\n"
             "Create API and App keys at: https://app.datadoghq.com/organization-settings/api-keys"
         )
+
+    # Apply app filter
+    query = apply_app_filter(query)
 
     # Parse timestamps
     from_timestamp = parse_time(from_time)

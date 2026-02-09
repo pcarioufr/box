@@ -74,7 +74,7 @@ The `libs/` directory contains the underlying CLI tools accessible via `./box.sh
 - **Confluence** (`./box.sh confluence`) - Sync Confluence pages to local markdown, plus markdown cleaning
 - **Jira** (`./box.sh jira`) - Fetch Jira tickets with custom fields and ADF-to-text conversion
 - **Snowflake** (`./box.sh snowflake`) - Execute SQL queries with INCLUDE directives and template variables
-- **Datadog** (`./box.sh datadog`) - Query and aggregate RUM data, create/update notebooks for Product Analytics
+- **Datadog** (`./box.sh datadog`) - Query and aggregate RUM data, fetch session timelines, create/update notebooks for Product Analytics
 - **Excalidraw** (`./box.sh draw`) - Local diagram editor for architecture diagrams, wireframes, and concept sketches
 
 See [libs/README.md](libs/README.md) for details, or run `./box.sh <command> --help`.

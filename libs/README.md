@@ -101,6 +101,22 @@ This repository uses a **unified runner pattern**: All libraries are accessed th
   --output daily_views.json
 ```
 
+#### Fetch Session Timelines
+
+```bash
+# Fetch a single session as YAML timeline
+./box.sh datadog fetch session abc-123-def-456
+
+# Fetch multiple sessions by session-level query
+./box.sh datadog fetch sessions --sessions "@usr.email:*@example.com" --from-time 7d
+
+# Fetch multiple sessions by view-level query (aggregate discovery)
+./box.sh datadog fetch sessions --views "@view.url_path:/notebook/*" --from-time 24h --limit 50
+
+# Fetch raw view attributes
+./box.sh datadog fetch view 3d8fce40-64fb-40fa-ad89-620039ae882c
+```
+
 #### Create and Update Notebooks
 
 ```bash
@@ -115,6 +131,8 @@ This repository uses a **unified runner pattern**: All libraries are accessed th
 - Query and aggregate RUM events
 - Multiple aggregation types (count, cardinality, avg, sum, percentiles)
 - Time series with configurable intervals
+- Fetch individual or batch session timelines as YAML
+- Two session discovery modes: search (by session facets) and aggregate (by view facets)
 - Create/update notebooks using standard Datadog API format
 - Bidirectional workflow: edit JSON locally, push to Datadog
 - Working folder organization
@@ -228,6 +246,7 @@ libs/
 │   ├── __main__.py        # CLI entry point
 │   ├── query_rum.py       # Individual event queries
 │   ├── aggregate_rum.py   # Aggregation queries
+│   ├── fetch_session.py   # Session timeline fetching
 │   └── create_notebook.py # Notebook create/update
 └── snowflake/             # SQL query execution
     ├── __main__.py

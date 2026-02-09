@@ -117,12 +117,63 @@ def cmd_notebook_update(args):
     print(f"\nNotebook updated: {notebook_url}")
 
 
+def cmd_fetch_session(args):
+    """Fetch a RUM session and build a timeline."""
+    from libs.datadog.fetch_session import fetch_session
+
+    fetch_session(
+        session_id=args.session_id,
+        output_file=args.output,
+        working_folder=args.working_folder,
+        session_attributes=args.session_attribute,
+        view_attributes=args.view_attribute,
+    )
+
+
+def cmd_fetch_view(args):
+    """Fetch a single RUM view event."""
+    from libs.datadog.fetch_session import fetch_view
+
+    fetch_view(
+        view_id=args.view_id,
+        output_file=args.output,
+        working_folder=args.working_folder,
+    )
+
+
+def cmd_fetch_sessions(args):
+    """Fetch multiple RUM sessions matching a query."""
+    from libs.datadog.fetch_session import fetch_sessions
+
+    if args.views:
+        query = args.views
+        views = True
+    elif args.sessions:
+        query = args.sessions
+        views = False
+    else:
+        print("Error: one of --sessions or --views is required", file=sys.stderr)
+        sys.exit(1)
+
+    fetch_sessions(
+        query=query,
+        from_time=args.from_time,
+        to_time=args.to_time,
+        limit=args.limit,
+        output_dir=args.output_dir,
+        working_folder=args.working_folder,
+        views=views,
+        session_attributes=args.session_attribute,
+        view_attributes=args.view_attribute,
+    )
+
+
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
         prog='datadog',
         description='Datadog CLI - Tools for querying RUM data and creating notebooks',
-        epilog='For detailed help: datadog rum --help | datadog notebook --help'
+        epilog='For detailed help: datadog rum --help | datadog notebook --help | datadog fetch --help'
     )
 
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
@@ -393,6 +444,181 @@ For complete examples, see: knowledge/datadog-notebooks.md
     )
     notebook_update_parser.set_defaults(func=cmd_notebook_update)
 
+    # ===== FETCH COMMANDS =====
+    fetch_parser = subparsers.add_parser('fetch', help='Fetch and export Datadog data')
+    fetch_subparsers = fetch_parser.add_subparsers(dest='fetch_command', help='Fetch subcommands')
+
+    # Fetch session command
+    fetch_session_parser = fetch_subparsers.add_parser(
+        'session',
+        help='Fetch a RUM session and build a timeline YAML',
+        description='''Fetch all view and action events for a RUM session and build
+a chronological timeline showing the user journey.
+
+ENVIRONMENT VARIABLES REQUIRED:
+  DD_API_KEY         Datadog API key
+  DD_APP_KEY         Datadog Application key
+  DD_SITE            Datadog site (default: datadoghq.com)
+
+OUTPUT:
+  A YAML file with session metadata and a timeline of view stints,
+  with actions nested under each view. Return visits to the same
+  view are detected and labeled accordingly.
+
+EXAMPLES:
+  # Basic fetch
+  datadog fetch session abc-123-def-456
+
+  # With working folder
+  datadog fetch session abc-123-def-456 --working-folder 2026-02-08_investigation
+
+  # Custom output filename
+  datadog fetch session abc-123-def-456 -o my_session.yaml
+''',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    fetch_session_parser.add_argument(
+        'session_id',
+        help='RUM session ID to fetch',
+    )
+    fetch_session_parser.add_argument(
+        '--working-folder',
+        metavar='FOLDER',
+        help='Working folder name. Saves to data/{folder}/datadog/{output}',
+    )
+    fetch_session_parser.add_argument(
+        '--output', '-o',
+        metavar='FILENAME',
+        help='Output filename. Default: session_{first8chars}.yaml',
+    )
+    fetch_session_parser.add_argument(
+        '--session-attribute',
+        action='append',
+        metavar='FACET',
+        help='Extra session-level attribute to include (e.g., @geo.city). Repeatable.',
+    )
+    fetch_session_parser.add_argument(
+        '--view-attribute',
+        action='append',
+        metavar='FACET',
+        help='Extra view-level attribute to include (e.g., @view.time_spent). Repeatable.',
+    )
+    fetch_session_parser.set_defaults(func=cmd_fetch_session)
+
+    # Fetch view command
+    fetch_view_parser = fetch_subparsers.add_parser(
+        'view',
+        help='Fetch a single RUM view event (raw attributes)',
+        description='''Fetch a single RUM view event by view ID and dump all its
+attributes as YAML. Useful for drilling into a specific view from a session timeline.
+
+EXAMPLES:
+  # Fetch a view spotted in a session timeline
+  datadog fetch view 3d8fce40-64fb-40fa-ad89-620039ae882c
+
+  # Save to a specific file
+  datadog fetch view 3d8fce40-64fb-40fa-ad89-620039ae882c -o dashboard_view.yaml
+''',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    fetch_view_parser.add_argument(
+        'view_id',
+        help='RUM view ID to fetch',
+    )
+    fetch_view_parser.add_argument(
+        '--working-folder',
+        metavar='FOLDER',
+        help='Working folder name. Saves to data/{folder}/datadog/{output}',
+    )
+    fetch_view_parser.add_argument(
+        '--output', '-o',
+        metavar='FILENAME',
+        help='Output filename. Default: view_{first8chars}.yaml',
+    )
+    fetch_view_parser.set_defaults(func=cmd_fetch_view)
+
+    # Fetch sessions (multi-session query) command
+    fetch_sessions_parser = fetch_subparsers.add_parser(
+        'sessions',
+        help='Fetch multiple RUM sessions matching a query',
+        description='''Fetch multiple RUM sessions matching a query and save each as
+a separate YAML timeline file. Creates an output directory containing one YAML per
+session plus a query.json tracking file.
+
+Two discovery modes (one required):
+  --sessions QUERY   Session-level query (e.g., by user, org). Discovers
+                     session IDs by paginating search results.
+  --views QUERY      View-level query (e.g., by URL path). Discovers session
+                     IDs via aggregate (group by session ID, sorted by
+                     matching view count desc).
+
+ENVIRONMENT VARIABLES REQUIRED:
+  DD_API_KEY         Datadog API key
+  DD_APP_KEY         Datadog Application key
+  DD_SITE            Datadog site (default: datadoghq.com)
+
+EXAMPLES:
+  # Session query: fetch sessions for a user
+  datadog fetch sessions --sessions "@usr.email:*@example.com" --from-time 7d
+
+  # View query: fetch sessions that visited a specific page
+  datadog fetch sessions --views "@view.url_path:/notebook/*" --from-time 24h
+
+  # View query with limit and custom output
+  datadog fetch sessions --views "@view.url_path:/dashboard/*" --from-time 7d --limit 50
+''',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    query_group = fetch_sessions_parser.add_mutually_exclusive_group(required=True)
+    query_group.add_argument(
+        '--sessions',
+        metavar='QUERY',
+        help='Session-level RUM query (discovers sessions by search)',
+    )
+    query_group.add_argument(
+        '--views',
+        metavar='QUERY',
+        help='View-level RUM query (discovers sessions via aggregate, sorted by view count)',
+    )
+    fetch_sessions_parser.add_argument(
+        '--from-time',
+        required=True,
+        help='Start time (relative: "1h"/"24h"/"7d", ISO, or Unix timestamp)',
+    )
+    fetch_sessions_parser.add_argument(
+        '--to-time',
+        help='End time (default: now). Same formats as --from-time',
+    )
+    fetch_sessions_parser.add_argument(
+        '--limit',
+        type=int,
+        default=100,
+        help='Maximum number of sessions to fetch (default: 100)',
+    )
+    fetch_sessions_parser.add_argument(
+        '--output-dir',
+        metavar='DIRNAME',
+        help='Output directory name. Default: sessions_YYYYMMDD_HHMMSS',
+    )
+    fetch_sessions_parser.add_argument(
+        '--working-folder',
+        metavar='FOLDER',
+        help='Working folder name. Saves to data/{folder}/datadog/{output-dir}',
+    )
+    fetch_sessions_parser.add_argument(
+        '--session-attribute',
+        action='append',
+        metavar='FACET',
+        help='Extra session-level attribute to include (e.g., @geo.city). Repeatable.',
+    )
+    fetch_sessions_parser.add_argument(
+        '--view-attribute',
+        action='append',
+        metavar='FACET',
+        help='Extra view-level attribute to include (e.g., @view.time_spent). Repeatable.',
+    )
+    fetch_sessions_parser.set_defaults(func=cmd_fetch_sessions)
+
     # Parse and execute
     args = parser.parse_args()
 
@@ -407,6 +633,10 @@ For complete examples, see: knowledge/datadog-notebooks.md
 
     if args.command == 'notebook' and not hasattr(args, 'func'):
         notebook_parser.print_help()
+        sys.exit(1)
+
+    if args.command == 'fetch' and not hasattr(args, 'func'):
+        fetch_parser.print_help()
         sys.exit(1)
 
     # Execute command

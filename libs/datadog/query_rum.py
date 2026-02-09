@@ -23,6 +23,14 @@ DATA_DIR = Path(__file__).parent.parent.parent / "data"
 DEFAULT_SUBDIR = "datadog"  # Default subdirectory for auto-generated filenames
 
 
+def apply_app_filter(query: str) -> str:
+    """Append @application.id filter from DD_RUM_APP_ID if set and not already in query."""
+    app_id = os.getenv("DD_RUM_APP_ID")
+    if app_id and "@application.id:" not in query:
+        query = f"{query} @application.id:{app_id}"
+    return query
+
+
 def parse_time(time_str: str) -> int:
     """Parse time string to Unix timestamp in milliseconds.
 
@@ -96,6 +104,9 @@ def query_rum_data(
             "Missing Datadog credentials. Set DD_API_KEY and DD_APP_KEY environment variables.\n"
             "Create API and App keys at: https://app.datadoghq.com/organization-settings/api-keys"
         )
+
+    # Apply app filter
+    query = apply_app_filter(query)
 
     # Parse timestamps
     from_timestamp = parse_time(from_time)

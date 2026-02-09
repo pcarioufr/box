@@ -63,9 +63,22 @@ The CLI commands remain separate for each data source:
 # Aggregate RUM data (top N, time series)
 ./box.sh datadog rum aggregate QUERY [options]
 
+# Fetch a single session timeline as YAML
+./box.sh datadog fetch session SESSION_ID [options]
+
+# Fetch multiple sessions by session-level query
+./box.sh datadog fetch sessions --sessions QUERY --from-time TIME [options]
+
+# Fetch multiple sessions by view-level query (aggregate discovery)
+./box.sh datadog fetch sessions --views QUERY --from-time TIME [options]
+
+# Fetch raw view attributes as YAML
+./box.sh datadog fetch view VIEW_ID [options]
+
 # Detailed help
 ./box.sh datadog rum query --help
 ./box.sh datadog rum aggregate --help
+./box.sh datadog fetch --help
 ```
 
 ### Snowflake
