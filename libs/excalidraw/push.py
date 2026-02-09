@@ -16,6 +16,13 @@ import yaml
 
 # ============ Defaults ============
 
+# Excalidraw expects numeric font family IDs, not strings
+FONT_FAMILY = {
+    "Virgil": 1,
+    "Helvetica": 2,
+    "Cascadia": 3,
+}
+
 SHAPE_DEFAULTS = {
     "fillStyle": "solid",
     "strokeWidth": 2,
@@ -26,13 +33,20 @@ SHAPE_DEFAULTS = {
 
 LABEL_DEFAULTS = {
     "fontSize": 16,
-    "fontFamily": "Virgil",
+    "fontFamily": 1,  # Virgil
 }
 
 TEXT_DEFAULTS = {
     "fontSize": 20,
-    "fontFamily": "Virgil",
+    "fontFamily": 1,  # Virgil
 }
+
+
+def resolve_font_family(value):
+    """Resolve a font family name to its numeric ID."""
+    if isinstance(value, int):
+        return value
+    return FONT_FAMILY.get(value, LABEL_DEFAULTS["fontFamily"])
 
 
 # ============ Parsing ============
@@ -118,7 +132,7 @@ def shape_to_skeleton(shape):
     if shape.get("label"):
         label = {"text": shape["label"]}
         label["fontSize"] = shape.get("fontSize", LABEL_DEFAULTS["fontSize"])
-        label["fontFamily"] = shape.get("fontFamily", LABEL_DEFAULTS["fontFamily"])
+        label["fontFamily"] = resolve_font_family(shape.get("fontFamily", LABEL_DEFAULTS["fontFamily"]))
         skeleton["label"] = label
 
     return skeleton
@@ -134,7 +148,7 @@ def text_to_skeleton(text_entry):
         "x": x, "y": y,
         "text": text_entry["text"],
         "fontSize": text_entry.get("fontSize", TEXT_DEFAULTS["fontSize"]),
-        "fontFamily": text_entry.get("fontFamily", TEXT_DEFAULTS["fontFamily"]),
+        "fontFamily": resolve_font_family(text_entry.get("fontFamily", TEXT_DEFAULTS["fontFamily"])),
         "strokeColor": color.get("stroke", "#1e1e1e"),
     }
 
@@ -161,7 +175,10 @@ def connector_to_skeleton(connector, shapes_lookup):
     }
 
     if connector.get("label"):
-        skeleton["label"] = {"text": connector["label"]}
+        skeleton["label"] = {
+            "text": connector["label"],
+            "fontFamily": resolve_font_family(connector.get("fontFamily", LABEL_DEFAULTS["fontFamily"])),
+        }
 
     return skeleton
 

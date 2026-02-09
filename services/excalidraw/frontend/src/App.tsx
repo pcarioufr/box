@@ -88,8 +88,10 @@ function App() {
       case 'elements_batch_created': {
         const incoming = msg.elements || (msg.element ? [msg.element] : [])
         if (incoming.length > 0) {
-          const cleaned = incoming.map(stripServerFields)
-          const converted = convertToExcalidrawElements(cleaned, { regenerateIds: false })
+          const converted = convertToExcalidrawElements(
+            incoming.map(stripServerFields),
+            { regenerateIds: false }
+          )
           applyRemoteUpdate(() => {
             api.updateScene({ elements: [...api.getSceneElements(), ...converted] })
           })

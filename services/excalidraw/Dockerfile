@@ -15,7 +15,7 @@ EXPOSE 3000
 # At startup: assemble a writable build dir from mounted source + pre-installed deps, then build
 CMD mkdir -p /build && \
     cp -r /frontend/* /build/ && \
-    ln -s /frontend_deps/node_modules /build/node_modules && \
+    ln -sf /frontend_deps/node_modules /build/node_modules && \
     cd /build && npm run build && \
     cp -r dist /app/public && \
     cd /app && npm start
