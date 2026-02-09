@@ -6,11 +6,16 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install --production
 
-# Install frontend dependencies (source mounted at runtime)
-COPY frontend/package.json /frontend/package.json
-RUN cd /frontend && npm install
+# Install frontend dependencies in a location the volume mount won't shadow
+COPY frontend/package.json /frontend_deps/package.json
+RUN cd /frontend_deps && npm install
 
 EXPOSE 3000
 
-# Build frontend at startup, then start server
-CMD cd /frontend && npm run build && cp -r dist /app/public && cd /app && npm start
+# At startup: assemble a writable build dir from mounted source + pre-installed deps, then build
+CMD mkdir -p /build && \
+    cp -r /frontend/* /build/ && \
+    ln -s /frontend_deps/node_modules /build/node_modules && \
+    cd /build && npm run build && \
+    cp -r dist /app/public && \
+    cd /app && npm start

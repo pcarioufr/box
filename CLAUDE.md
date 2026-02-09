@@ -82,7 +82,7 @@ Create architecture diagrams, low-fidelity designs, and concept sketches using E
 3. **Iterate**: Edit the YAML, push again — only changed elements are updated
 4. **View**: Open http://localhost:3000 to see the diagram in Excalidraw UI
 
-**Push early and often.** When building a diagram, push intermediate states as you go — don't wait until the diagram is "complete". The user has the canvas open in their browser and can see updates in real-time. Pushing progressively lets them watch the diagram take shape and course-correct early (e.g., "move that box to the right", "wrong grouping"). A good rhythm: push after laying out the first few shapes, then after adding connectors, then after labels/styling.
+**Push after every meaningful change.** The user has the canvas open in their browser and can see updates in real-time. Never batch multiple edits into a single push — push each change individually so the user can watch the diagram evolve and course-correct early. This applies to both initial creation (push after first shapes, then connectors, then labels) and iteration (push after each tweak, not all tweaks at once).
 
 ### YAML Format
 
