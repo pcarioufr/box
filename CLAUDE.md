@@ -149,3 +149,4 @@ For detailed working folder conventions (naming, when to create vs continue, mas
   - `knowledge/pa/` - Product Analytics knowledge (RUM patterns, Snowflake model, Jira fields, notebooks)
 - `.claude/skills/` - Custom Claude skills with utilities and scripts
 - `box.sh` - Main CLI entry point
+- `tmp/` - Temporary files (SQL queries, scratch data). Use `tmp/` (project-local) instead of `/tmp/` for all temporary files so sandbox permissions don't block writes.

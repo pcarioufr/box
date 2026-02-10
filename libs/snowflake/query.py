@@ -6,6 +6,7 @@ A utility script that executes SQL queries from files and saves results to outpu
 
 Usage:
   ./query.py <path-to-sql-file> [options]
+  ./query.py --sql "SELECT ..." [options]
 
 Examples:
   ./query.py ../runs/25-11-21-log-revenue-top10/01-discover-usage-tables/query.sql
@@ -13,8 +14,11 @@ Examples:
   ./query.py my_analysis.sql --output custom_results.csv
   ./query.py my_query.sql --limit 100
   ./query.py my_query.sql --var-signup_method standard --var-datacenter us1
+  ./query.py --sql "SELECT COUNT(*) FROM REPORTING.GENERAL.DIM_MONITOR"
+  ./query.py --sql "SELECT * FROM REPORTING.GENERAL.DIM_SLO LIMIT 10" --output results.csv
 
 Options:
+  --sql <query>              Pass SQL query inline (no file needed). Output defaults to tmp/output.csv
   --working-folder <folder>  Working folder name (e.g., "2026-02-03_analysis"). Saves to data/{folder}/snowflake/{output}
   --output <path>            Specify output filename or directory (default: output.csv next to SQL file)
   --limit <N>                Limit results to N rows
@@ -538,11 +542,23 @@ def main():
     if len(sys.argv) < 2 or sys.argv[1] in ['-h', '--help']:
         print(__doc__)
         sys.exit(0)
-    
-    sql_file_arg = sys.argv[1]
-    sql_file = Path(sql_file_arg).resolve()
-    debug(f"Resolved SQL file path: {sql_file}")
-    
+
+    # Check if first arg is --sql (inline query mode)
+    inline_sql = None
+    sql_file = None
+
+    if sys.argv[1] == '--sql':
+        if len(sys.argv) < 3:
+            error("--sql requires a query string")
+            sys.exit(1)
+        inline_sql = sys.argv[2]
+        start_idx = 3
+    else:
+        sql_file_arg = sys.argv[1]
+        sql_file = Path(sql_file_arg).resolve()
+        debug(f"Resolved SQL file path: {sql_file}")
+        start_idx = 2
+
     # Parse options
     output_arg = None
     limit = None
@@ -550,7 +566,7 @@ def main():
     working_folder = None
     variables = {}
 
-    i = 2
+    i = start_idx
     while i < len(sys.argv):
         if sys.argv[i] == '--working-folder' and i + 1 < len(sys.argv):
             working_folder = sys.argv[i + 1]
@@ -577,15 +593,32 @@ def main():
 
     debug(f"Parsed options: limit={limit}, output={output_arg}, working_folder={working_folder}, variables={variables}")
 
-    # Resolve output path (auto-detect or use --output argument)
-    output_path = resolve_output_path(sql_file, output_arg, working_folder)
+    # Resolve output path
+    if inline_sql:
+        # For inline SQL, default output to tmp/output.csv
+        if working_folder:
+            output_dir = DATA_DIR / working_folder / DEFAULT_SUBDIR
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output_path = output_dir / (output_arg or "output.csv")
+        elif output_arg:
+            output_path = Path(output_arg).resolve()
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            tmp_dir = DATA_DIR.parent / "tmp"
+            tmp_dir.mkdir(parents=True, exist_ok=True)
+            output_path = tmp_dir / "output.csv"
+    else:
+        output_path = resolve_output_path(sql_file, output_arg, working_folder)
     debug(f"Resolved output path: {output_path}")
 
     # Display execution info
     info(f"\n{'=' * 100}")
     info("SNOWFLAKE QUERY EXECUTOR")
     info('=' * 100)
-    info(f"\n📄 SQL File: {sql_file}")
+    if inline_sql:
+        info(f"\n📄 SQL: (inline)")
+    else:
+        info(f"\n📄 SQL File: {sql_file}")
     info(f"💾 Output: {output_path}")
     if limit:
         info(f"🔢 Limit: {limit} rows")
@@ -594,16 +627,21 @@ def main():
     if debug_mode:
         print(f"🐛 Debug: enabled")
     print()
-    
+
     try:
         # Load query
-        info("Loading query...")
-        query = load_query(sql_file)
-        debug(f"Query loaded successfully ({len(query)} characters)")
-        
+        if inline_sql:
+            query = inline_sql
+            debug(f"Using inline SQL ({len(query)} characters)")
+        else:
+            info("Loading query...")
+            query = load_query(sql_file)
+            debug(f"Query loaded successfully ({len(query)} characters)")
+
         # Preprocess query to handle INCLUDE directives and variable substitution
+        base_dir = sql_file.parent if sql_file else Path.cwd()
         debug("Preprocessing query (handling INCLUDE directives and variables)...")
-        preprocessed_query = preprocess_query(query, sql_file.parent, variables)
+        preprocessed_query = preprocess_query(query, base_dir, variables)
         debug(f"Preprocessed query ({len(preprocessed_query)} characters)")
         
         # Show query content only in debug mode

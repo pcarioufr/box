@@ -21,9 +21,11 @@ snowflake - Execute Snowflake queries
 
 Usage:
   snowflake query <sql-file> [options]    - Execute SQL query from file
+  snowflake query --sql "SELECT ..." [options] - Execute inline SQL query
   snowflake <sql-file> [options]          - Execute SQL query (query is implied)
 
 Options:
+  --sql <query>              Pass SQL query inline (no file needed). Output defaults to tmp/output.csv
   --working-folder <folder>  Working folder name (e.g., "2026-02-03_analysis"). Saves to data/{folder}/snowflake/{output}
   --output <path>            Specify output filename or directory (default: output.csv next to SQL file)
   --limit <N>                Limit results to N rows
@@ -33,6 +35,9 @@ Options:
 Examples:
   # Execute a query with default CSV output
   snowflake query analysis.sql
+
+  # Execute inline SQL
+  snowflake query --sql "SELECT COUNT(*) FROM REPORTING.GENERAL.DIM_MONITOR"
 
   # Execute with custom output location
   snowflake query analysis.sql --output ./results/
@@ -80,11 +85,15 @@ def main():
         sys.argv = [sys.argv[0]] + sys.argv[2:]
         query_module.main()
     
+    # If first arg is --sql, treat as implicit 'query' command with inline SQL
+    elif first_arg == '--sql':
+        query_module.main()
+
     # If first arg looks like a file path (not a known command), assume it's a query
     elif first_arg.endswith('.sql') or first_arg.startswith('.') or first_arg.startswith('/') or '/' in first_arg:
         # Treat as implicit 'query' command
         query_module.main()
-    
+
     else:
         print(f"Error: Unknown command or invalid file path '{first_arg}'", file=sys.stderr)
         print("", file=sys.stderr)
