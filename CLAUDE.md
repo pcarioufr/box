@@ -131,7 +131,15 @@ data/YYYY-MM-DD_short-description/
 For detailed working folder conventions (naming, when to create vs continue, master.md requirements), see the `/pa` skill documentation.
 
 
-## Snowflake Queries
+## Snowflake
+
+### Discovery
+
+Use `./box.sh snowflake discover` to explore schemas, tables, and columns without writing metadata queries. Supports finding tables by pattern, analyzing column statistics with top values, previewing data, and listing accessible schemas.
+
+See `./box.sh snowflake discover --help` for available commands and options.
+
+### Query Execution
 
 For temporary or discovery queries, prefer inline SQL with `--sql` to avoid creating throwaway files: `./box.sh snowflake query --sql "SELECT ..."`. Use SQL files only for reusable or complex queries.
 
