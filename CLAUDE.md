@@ -7,6 +7,7 @@ This project contains utilities and data exports from Datadog's internal systems
 - `/sync` - Sync external documents (Google Docs, Confluence) to local markdown. Handles URLs or refresh commands.
 - `/pa` - Product Analytics: query user behavior (Datadog RUM), business metrics (Snowflake), and qualitative feedback (Jira). Intelligently routes to the right data source(s) based on your question.
 - `/prd` - Iterate on Product Requirement Documents using Opus model for deep content analysis and refinement
+- `/todo` - Manage a personal todo list in `data/todo.md`. Add, complete, triage, and clean up tasks.
 - `/box` - Run commands in The Box Docker container
 
 ## Document Sync
@@ -128,6 +129,11 @@ data/YYYY-MM-DD_short-description/
 ```
 
 For detailed working folder conventions (naming, when to create vs continue, master.md requirements), see the `/pa` skill documentation.
+
+
+## Snowflake Queries
+
+For temporary or discovery queries, prefer inline SQL with `--sql` to avoid creating throwaway files: `./box.sh snowflake query --sql "SELECT ..."`. Use SQL files only for reusable or complex queries.
 
 ## Directory Structure
 
