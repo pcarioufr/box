@@ -87,24 +87,16 @@ Create architecture diagrams, low-fidelity designs, and concept sketches using E
 
 ### YAML Format
 
-```yaml
-shapes:
-  - id: auth
-    type: rectangle                  # rectangle | ellipse | diamond
-    pos: [100, 100, 200x100]        # [x, y, WIDTHxHEIGHT]
-    label: "Auth Service"
-    color: {bg: "#a5d8ff"}
-texts:
-  - text: "Architecture Overview"
-    pos: [200, 30]
-connectors:
-  - type: arrow                      # arrow | line
-    from: auth                       # references shape id
-    to: db
-    label: "queries"
-```
+Diagrams use a hierarchical YAML format where structure reflects nesting. Two main sections:
+- `shapes` - everything visual (rectangles, ellipses, diamonds, text, groups)
+- `connectors` - arrows/lines between shapes
 
-Defaults: fillStyle=solid, strokeColor=#1e1e1e, strokeWidth=2, fontSize=16 (labels) / 20 (text), fontFamily=Virgil.
+Groups can contain nested shapes with relative positions. Change a group's position to move all members together.
+
+**For complete format documentation with examples:**
+```bash
+./box.sh draw api yaml
+```
 
 ### State Tracking
 
