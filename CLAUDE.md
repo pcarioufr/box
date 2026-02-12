@@ -167,6 +167,8 @@ See `./box.sh snowflake discover --help` for available commands and options.
 
 For temporary or discovery queries, prefer inline SQL with `--sql` to avoid creating throwaway files: `./box.sh snowflake query --sql "SELECT ..."`. Use SQL files only for reusable or complex queries.
 
+Use double backslashes (`\\d+`, `\\w+`) for regex in SQL files — both the Snowflake CLI and Metabase consume one escape layer, so `\\d` arrives as `\d` at the Snowflake engine.
+
 ## Directory Structure
 
 - `services/` - Service definitions (containers, workers, servers)
