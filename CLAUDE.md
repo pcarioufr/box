@@ -107,6 +107,38 @@ Each YAML file has a sibling `.state.json` that maps YAML IDs to server-assigned
 - YAML diagrams → anywhere in `data/` (e.g., `data/diagrams/*.yaml`)
 - State files → sibling `.state.json` next to each YAML
 
+## Dashboards (Metabase)
+
+Manage Metabase dashboards using YAML definitions. Dashboards are authored declaratively and pushed to the Metabase server.
+
+### CLI Commands
+
+```bash
+./box.sh metabase dashboard pull <id> --dir <dir>           # Pull dashboard + questions to YAML
+./box.sh metabase dashboard push --dir <dir>                # Push (create or update)
+./box.sh metabase dashboard format                          # Show YAML format help
+```
+
+### Workflow
+
+1. **Pull**: `./box.sh metabase dashboard pull 75122 --dir my-dashboard/` — downloads dashboard + all questions
+2. **Edit**: Modify YAML files (SQL queries, visualizations, card positions)
+3. **Push**: `./box.sh metabase dashboard push --dir my-dashboard/` — updates dashboard in Metabase
+
+To create a new dashboard: remove `.state.yaml` before pushing with `--parent` and `--database` flags.
+
+### State Tracking
+
+Each dashboard directory has a `.state.yaml` file that maps local files to Metabase IDs. This enables incremental updates and environment promotion (remove state file to deploy same dashboard to different environment).
+
+### Output Location
+
+- Dashboard directories → anywhere in `data/` (e.g., `data/YYYY-MM-DD_investigation/`)
+- State files → `.state.yaml` in each dashboard directory
+- Question files → organized by tabs within dashboard directory
+
+**See `libs/metabase/README.md` for complete documentation.**
+
 ## Working Folders
 
 All data work is organized in date-based working folders under `data/`:
@@ -145,6 +177,7 @@ For temporary or discovery queries, prefer inline SQL with `--sql` to avoid crea
   - `libs/jira/` - Jira API tools (ticket fetching, ADF conversion)
   - `libs/datadog/` - Datadog API tools (RUM queries)
   - `libs/sync/` - Document sync management (Google Docs, Confluence, markdown cleaning)
+  - `libs/metabase/` - Metabase dashboard management (YAML pull/push, state tracking)
 - `data/` - Working folders organized by date (see Working Folders section above)
   - `data/sync.yaml` - Sync configuration for Google Docs and Confluence
   - `data/_google/` - Default output for synced Google Docs

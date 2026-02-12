@@ -1,0 +1,126 @@
+# Metabase Configuration
+# 
+# This file stores configuration settings for the Metabase library,
+# including color palettes for visualizations.
+
+# =============================================================================
+# Color Palettes
+# =============================================================================
+# 
+# Define color palettes that can be referenced in card visualization settings.
+# Each palette contains named colors that can be used consistently across
+# dashboards and cards.
+#
+# Usage in card YAML:
+#   series_settings:
+#     MY_METRIC:
+#       color: "enum1"  # References the first color in the enum palette
+#
+# Courtesy: https://www.learnui.design/tools/data-color-picker.html#single
+
+colors:
+  palettes:
+    # Categorical/Enum palette - for discrete categories
+    enum:
+      enum1: "#003f5c"
+      enum2: "#2f4b7c"
+      enum3: "#665191"
+      enum4: "#a05195"
+      enum5: "#d45087"
+      enum6: "#f95d6a"
+      enum7: "#ff7c43"
+      enum8: "#ffa600"
+    
+    # Diverging scale palette - for continuous values with a midpoint
+    scale:
+      scale1: "#00876c"
+      scale2: "#74aa7c"
+      scale3: "#bccd99"
+      scale4: "#fdf1c5"  # midpoint (neutral)
+      scale5: "#f0bc85"
+      scale6: "#e5825d"
+      scale7: "#d43d51"
+    
+    # Blue shades - light to dark
+    blue-shades:
+      blue1: "#015ac1"  # darkest
+      blue2: "#5073ce"
+      blue3: "#788cda"
+      blue4: "#9ba7e7"
+      blue5: "#bcc3f3"
+      blue6: "#dce0ff"  # lightest
+    
+    # Green shades - light to dark
+    green-shades:
+      green1: "#00c14d"  # darkest
+      green2: "#4eca67"
+      green3: "#74d380"
+      green4: "#93db99"
+      green5: "#b0e3b3"
+      green6: "#cbebcc"  # lightest
+    
+    # Purple shades - light to dark
+    purple-shades:
+      purple1: "#6100c1"  # darkest
+      purple2: "#833ece"
+      purple3: "#a166db"
+      purple4: "#bc8de7"
+      purple5: "#d6b4f3"
+      purple6: "#efdbff"  # lightest
+    
+    # Orange shades - light to dark
+    orange-shades:
+      orange1: "#c16700"  # darkest
+      orange2: "#d07e33"
+      orange3: "#de9456"
+      orange4: "#ebac79"
+      orange5: "#f6c39d"
+      orange6: "#ffdbc1"  # lightest
+    
+    # Red shades - light to dark
+    red-shades:
+      red1: "#c1003a"  # darkest
+      red2: "#d24656"
+      red3: "#e06d73"
+      red4: "#ed9192"
+      red5: "#f7b4b3"
+      red6: "#ffd6d5"  # lightest
+    
+    # Yellow shades - light to dark
+    yellow-shades:
+      yellow1: "#c1a701"  # darkest
+      yellow2: "#ccb23b"
+      yellow3: "#d6be5e"
+      yellow4: "#dfca7e"
+      yellow5: "#e8d69d"
+      yellow6: "#efe2bc"  # lightest
+    
+    # Pink shades - light to dark
+    pink-shades:
+      pink1: "#c104bb"  # darkest
+      pink2: "#cf4bc7"
+      pink3: "#dc73d3"
+      pink4: "#e796df"
+      pink5: "#f2b7ea"
+      pink6: "#fbd8f6"  # lightest
+    
+    # Grey shades - light to dark
+    grey-shades:
+      grey1: "#000000"  # darkest (black)
+      grey2: "#2c2c2c"
+      grey3: "#555555"
+      grey4: "#818181"
+      grey5: "#b0b0b0"
+      grey6: "#e2e2e2"  # lightest
+
+
+# =============================================================================
+# Future Configuration Sections
+# =============================================================================
+# 
+# This file will be extended to include:
+# - Default dashboard settings
+# - Visualization defaults
+# - Export/import settings
+# - etc.
+

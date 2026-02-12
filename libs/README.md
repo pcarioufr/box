@@ -200,6 +200,37 @@ connectors:
 
 ---
 
+### Metabase Library (`metabase/`)
+
+**Purpose**: Manage Metabase dashboards using YAML definitions with pull/push workflow
+
+```bash
+# Pull dashboard from Metabase
+./box.sh metabase dashboard pull 75122 --dir my-dashboard/
+
+# Push changes to existing dashboard
+./box.sh metabase dashboard push --dir my-dashboard/
+
+# Create new dashboard
+./box.sh metabase dashboard push --dir my-dashboard/ --parent 20138 --database 43
+
+# Show format help
+./box.sh metabase dashboard format
+./box.sh metabase question format
+```
+
+**Features**:
+- Declarative YAML dashboards with state tracking (`.state.yaml`)
+- Automatic question management (pull/push handles all cards)
+- Color palette configuration for consistent visualizations
+- Environment promotion (remove state file to deploy to different env)
+- SQL queries in separate files for version control
+- Tab-based organization for dashboard cards
+
+**Documentation**: [libs/metabase/README.md](./metabase/README.md)
+
+---
+
 ### Common Library (`common/`)
 
 **Purpose**: Shared utilities used by multiple libraries
@@ -248,11 +279,22 @@ libs/
 │   ├── aggregate_rum.py   # Aggregation queries
 │   ├── fetch_session.py   # Session timeline fetching
 │   └── create_notebook.py # Notebook create/update
-└── snowflake/             # SQL query execution
-    ├── __main__.py
+├── snowflake/             # SQL query execution
+│   ├── __main__.py
+│   ├── cli.py             # CLI routing
+│   ├── query.py           # Query execution logic
+│   └── README.md          # Detailed documentation
+├── excalidraw/            # Excalidraw diagram API
+│   ├── __main__.py        # CLI entry point
+│   └── api.py             # Canvas API client
+└── metabase/              # Metabase dashboard management
+    ├── __main__.py        # CLI entry point
     ├── cli.py             # CLI routing
-    ├── query.py           # Query execution logic
-    └── README.md          # Detailed documentation
+    ├── dashboard.py       # Dashboard pull/push
+    ├── question.py        # Question operations
+    ├── config.yaml        # Color palettes
+    ├── model.md           # YAML format spec
+    └── README.md          # Complete documentation
 ```
 
 ## Setup
