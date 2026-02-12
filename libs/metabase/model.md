@@ -1156,3 +1156,85 @@ question:
     text: "Section Title"
     text_align: center
 ```
+
+---
+
+## Snowflake SQL Gotchas (Metabase Context)
+
+SQL queries run through Metabase's Snowflake JDBC driver, which behaves slightly differently from the Snowflake CLI or SnowSQL. These are hard-won lessons from debugging silent failures and cryptic errors.
+
+### 1. Double-escape regex patterns
+
+Metabase sends SQL to Snowflake via JSON. A single backslash in your `.sql` file (e.g. `\d+`) gets consumed by JSON serialization and arrives as `d+` at Snowflake — **silently matching nothing**.
+
+```sql
+-- ❌ BAD: single escape — silently returns empty results
+WHERE path RLIKE '/monitors/\d+'
+
+-- ✅ GOOD: double escape — arrives as \d+ at Snowflake
+WHERE path RLIKE '/monitors/\\d+'
+```
+
+This applies to `RLIKE`, `REGEXP_SUBSTR`, `REGEXP_REPLACE`, and any regex function. The Snowflake CLI also handles `\\d` correctly (it just becomes `\d` in the Python string), so double escapes work in both contexts.
+
+### 2. No numeric types in TRY_TO_TIMESTAMP / TO_TIMESTAMP
+
+Metabase's Snowflake driver rejects `TRY_TO_TIMESTAMP` (and `TO_TIMESTAMP`) with numeric arguments — even `INTEGER`:
+
+```sql
+-- ❌ Fails in Metabase: "TRY_CAST cannot be used with NUMBER(38,6) and TIMESTAMP_NTZ(6)"
+SELECT TRY_TO_TIMESTAMP(TRY_TO_NUMBER(val) / 1000)
+
+-- ❌ Also fails: "TRY_CAST cannot be used with NUMBER(38,0) and TIMESTAMP_NTZ(3)"
+SELECT TRY_TO_TIMESTAMP(TRY_TO_NUMBER(val)::INTEGER, 3)
+
+-- ✅ GOOD: use DATEADD from the Unix epoch instead
+SELECT DATEADD('s', FLOOR(TRY_TO_NUMBER(val) / 1000), '1970-01-01'::TIMESTAMP_NTZ)
+
+-- ✅ With millisecond precision:
+SELECT DATEADD('ms', TRY_TO_NUMBER(val) % 1000,
+       DATEADD('s', FLOOR(TRY_TO_NUMBER(val) / 1000), '1970-01-01'::TIMESTAMP_NTZ))
+```
+
+`TRY_TO_TIMESTAMP(string)` is fine — only numeric inputs trigger the JDBC driver issue.
+
+### 3. Template tag types matter for filtering
+
+Metabase template tags default to `type: "text"`, which sends the parameter value as a string. For numeric filters (like org_id), this can cause silent type mismatches or empty results.
+
+```yaml
+# ❌ BAD: default type is "text" — org_id sent as string '2' instead of number 2
+parameters:
+  org_id:
+    display_name: "Org ID"
+
+# ✅ GOOD: explicit number type
+parameters:
+  org_id:
+    type: "number/="
+    display_name: "Org ID"
+```
+
+### 4. Parameter mappings need card_id
+
+Dashboard parameter mappings must include the `card_id` of the dashcard they belong to. Without it, the parameter filter appears in the UI but doesn't flow to questions — Metabase shows "You'll need to pick a value for 'X' before this query can run."
+
+This is handled automatically by `dashboard.py` during push, but if you're debugging parameter issues, check that each `parameter_mappings` entry has a `card_id` field in the API payload.
+
+### 5. Parameter defaults must be arrays
+
+For `number/=` type parameters, the default value must be an array, not a scalar:
+
+```yaml
+# ❌ BAD
+parameters:
+  - id: "org_id_filter"
+    type: "number/="
+    default: 2
+
+# ✅ GOOD
+parameters:
+  - id: "org_id_filter"
+    type: "number/="
+    default: [2]
+```

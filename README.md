@@ -75,6 +75,7 @@ The `libs/` directory contains the underlying CLI tools accessible via `./box.sh
 - **Jira** (`./box.sh jira`) - Fetch Jira tickets with custom fields and ADF-to-text conversion
 - **Snowflake** (`./box.sh snowflake`) - Execute SQL queries with INCLUDE directives and template variables
 - **Datadog** (`./box.sh datadog`) - Query and aggregate RUM data, fetch session timelines, create/update notebooks for Product Analytics
+- **Metabase** (`./box.sh metabase`) - Manage Metabase dashboards using YAML definitions with Terraform-like state tracking for pull/push workflows
 - **Excalidraw** (`./box.sh draw`) - Local diagram editor for architecture diagrams, wireframes, and concept sketches
 
 See [libs/README.md](libs/README.md) for details, or run `./box.sh <command> --help`.
