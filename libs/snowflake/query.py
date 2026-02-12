@@ -450,19 +450,19 @@ def save_as_csv(output_path: Path, columns: List[str], rows: List[tuple]):
         writer.writerows(rows)
 
 
-def detect_output_location(sql_file: Path) -> Path:
+def detect_output_location(sql_file: Path, variables: Optional[dict] = None) -> Path:
     """
     Detect where to place output file based on SQL file location.
 
-    Default: output.csv next to the SQL file.
+    Default: {stem}[_{var-val}...].csv next to the SQL file.
 
     Returns:
         Full path to output file
     """
-    return sql_file.parent / "output.csv"
+    return sql_file.parent / generate_output_filename(sql_file, variables)
 
 
-def resolve_output_path(sql_file: Path, output_arg: Optional[str], working_folder: Optional[str] = None) -> Path:
+def resolve_output_path(sql_file: Path, output_arg: Optional[str], working_folder: Optional[str] = None, variables: Optional[dict] = None) -> Path:
     """
     Resolve the final output path based on --output argument and SQL file location.
 
@@ -490,7 +490,7 @@ def resolve_output_path(sql_file: Path, output_arg: Optional[str], working_folde
                 return (output_dir / output_arg).resolve()
         else:
             # Generate a default filename
-            output_filename = generate_output_filename(sql_file)
+            output_filename = generate_output_filename(sql_file, variables)
             return output_dir / output_filename
 
     # Legacy behavior when no working folder is specified
@@ -527,12 +527,21 @@ def resolve_output_path(sql_file: Path, output_arg: Optional[str], working_folde
             return output_dir / "results.csv"
 
     # No --output specified, auto-detect
-    return detect_output_location(sql_file)
+    return detect_output_location(sql_file, variables)
 
 
-def generate_output_filename(sql_file: Path) -> str:
-    """Generate output filename matching the SQL file name with .csv extension."""
-    return f"{sql_file.stem}.csv"
+def generate_output_filename(sql_file: Path, variables: Optional[dict] = None) -> str:
+    """Generate output filename matching the SQL file name with .csv extension.
+
+    When template variables are provided, appends them as a suffix so that
+    multiple runs with different variables don't overwrite each other.
+    E.g., monitor-response-rate.sql --var-org_id 2 → monitor-response-rate_org_id-2.csv
+    """
+    stem = sql_file.stem
+    if variables:
+        suffix = "_".join(f"{k}-{v}" for k, v in sorted(variables.items()))
+        stem = f"{stem}_{suffix}"
+    return f"{stem}.csv"
 
 
 def main():
@@ -608,7 +617,7 @@ def main():
             tmp_dir.mkdir(parents=True, exist_ok=True)
             output_path = tmp_dir / "output.csv"
     else:
-        output_path = resolve_output_path(sql_file, output_arg, working_folder)
+        output_path = resolve_output_path(sql_file, output_arg, working_folder, variables)
     debug(f"Resolved output path: {output_path}")
 
     # Display execution info
