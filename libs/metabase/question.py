@@ -100,12 +100,12 @@ def yaml_to_json_question(question_yaml: Dict[str, Any], yaml_path: Path, databa
     # Extract INCLUDE directives ({{#card-id-alias}})
     include_pattern = r'\{\{#(\d+)-([^}]+)\}\}'
     include_matches = re.findall(include_pattern, sql_query)
-    
+
     for card_id_str, alias in include_matches:
         card_id = int(card_id_str)
         full_name = f"#{card_id_str}-{alias}"
         tag_id = str(uuid.uuid4())
-        
+
         template_tags[full_name] = {
             "id": tag_id,
             "name": full_name,
@@ -113,7 +113,30 @@ def yaml_to_json_question(question_yaml: Dict[str, Any], yaml_path: Path, databa
             "type": "card",
             "card-id": card_id
         }
-    
+
+    # Merge YAML parameter overrides into extracted template tags
+    # Supports: type, display_name, default, required
+    parameters = question_yaml.get('parameters', {})
+    if parameters:
+        for param_name, param_config in parameters.items():
+            if param_name in template_tags:
+                tag = template_tags[param_name]
+                if 'type' in param_config:
+                    # Map Metabase filter widget types to template-tag types
+                    param_type = param_config['type']
+                    if param_type.startswith('number'):
+                        tag['type'] = 'number'
+                    elif param_type.startswith('date'):
+                        tag['type'] = 'date'
+                    else:
+                        tag['type'] = 'text'
+                if 'display_name' in param_config:
+                    tag['display-name'] = param_config['display_name']
+                if 'default' in param_config:
+                    tag['default'] = param_config['default']
+                if param_config.get('required'):
+                    tag['required'] = True
+
     # Build base question structure
     question_json = {
         "name": question_yaml['name'],

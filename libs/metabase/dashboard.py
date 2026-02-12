@@ -503,17 +503,21 @@ class Dashboard:
                     converted_mapping = {
                         "parameter_id": mapping["parameter_id"]
                     }
-                    
+
+                    # Metabase requires card_id inside each parameter mapping
+                    if dashcard.get("card_id"):
+                        converted_mapping["card_id"] = dashcard["card_id"]
+
                     # Convert simplified target format to Metabase format
                     target = mapping.get("target")
                     if isinstance(target, str):
-                        # Simple string format: "signup_type" 
+                        # Simple string format: "signup_type"
                         # Convert to: ["variable", ["template-tag", "signup_type"]]
                         converted_mapping["target"] = ["variable", ["template-tag", target]]
                     else:
                         # Already in complex format, use as-is
                         converted_mapping["target"] = target
-                    
+
                     dashcard["parameter_mappings"].append(converted_mapping)
             
             return dashcard
