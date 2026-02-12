@@ -11,11 +11,14 @@ Usage:
 
 import argparse
 import json
+import re
 import sys
 import os
 import logging
 import urllib.error
 from pathlib import Path
+
+import yaml
 
 from .dashboard import Dashboard
 from .utils import get_metabase_config, get_state_dir, load_env
@@ -82,6 +85,169 @@ def dashboard_push(args):
             import traceback
             traceback.print_exc()
         return 1
+
+
+# =============================================================================
+# Validate Command
+# =============================================================================
+
+def dashboard_validate(args):
+    """Validate dashboard YAML/SQL files for common issues before pushing."""
+    directory = Path(args.dir)
+    errors = []
+    warnings = []
+
+    # --- Check dashboard.yaml exists ---
+    dashboard_yaml_path = directory / "dashboard.yaml"
+    if not dashboard_yaml_path.exists():
+        errors.append(f"Missing dashboard.yaml in {directory}")
+        _print_validation_results(errors, warnings)
+        return 1
+
+    with open(dashboard_yaml_path, 'r', encoding='utf-8') as f:
+        dashboard_def = yaml.safe_load(f)
+
+    if not dashboard_def or "dashboard" not in dashboard_def:
+        errors.append("dashboard.yaml: missing top-level 'dashboard' key")
+        _print_validation_results(errors, warnings)
+        return 1
+
+    dashboard = dashboard_def["dashboard"]
+
+    # --- Collect all question files referenced by cards ---
+    question_files = []
+    tabs = dashboard.get("tabs", [])
+    flat_cards = dashboard.get("cards", [])
+
+    for tab_idx, tab in enumerate(tabs):
+        tab_name = tab.get("name", f"tab {tab_idx}")
+        for card_idx, card in enumerate(tab.get("cards", [])):
+            if "question_file" in card:
+                question_files.append((card["question_file"], f"tab '{tab_name}', card {card_idx}"))
+            elif "virtual_card" not in card:
+                errors.append(f"tab '{tab_name}', card {card_idx}: missing 'question_file' or 'virtual_card'")
+
+            # Check parameter_mappings reference valid dashboard parameters
+            if "parameter_mappings" in card:
+                param_ids = {p.get("id") for p in dashboard.get("parameters", [])}
+                for mapping in card["parameter_mappings"]:
+                    pid = mapping.get("parameter_id")
+                    if pid and param_ids and pid not in param_ids:
+                        errors.append(
+                            f"tab '{tab_name}', card {card_idx}: parameter_mapping references "
+                            f"'{pid}' but dashboard only has parameters: {', '.join(sorted(param_ids))}"
+                        )
+
+    for card_idx, card in enumerate(flat_cards):
+        if "question_file" in card:
+            question_files.append((card["question_file"], f"card {card_idx}"))
+
+    # --- Check dashboard parameters ---
+    for param in dashboard.get("parameters", []):
+        ptype = param.get("type", "")
+        default = param.get("default")
+        if ptype.startswith("number/") and default is not None and not isinstance(default, list):
+            warnings.append(
+                f"dashboard parameter '{param.get('id', '?')}': "
+                f"type is '{ptype}' but default is scalar ({default}), should be a list like [{default}]"
+            )
+
+    # --- Validate each question file ---
+    for qfile, location in question_files:
+        qpath = directory / qfile
+        if not qpath.exists():
+            errors.append(f"{location}: question file not found: {qfile}")
+            continue
+
+        with open(qpath, 'r', encoding='utf-8') as f:
+            qdef = yaml.safe_load(f)
+
+        if not qdef or "question" not in qdef:
+            errors.append(f"{qfile}: missing top-level 'question' key")
+            continue
+
+        question = qdef["question"]
+
+        # Check SQL file exists
+        sql_ref = question.get("sql")
+        if not sql_ref:
+            errors.append(f"{qfile}: missing 'sql' field")
+            continue
+        if not sql_ref.endswith('.sql'):
+            errors.append(f"{qfile}: sql must reference a .sql file, got: {sql_ref}")
+            continue
+
+        sql_path = qpath.parent / sql_ref
+        if not sql_path.exists():
+            errors.append(f"{qfile}: SQL file not found: {sql_ref}")
+            continue
+
+        sql_content = sql_path.read_text()
+
+        # --- SQL gotcha checks ---
+        _check_sql_gotchas(sql_content, sql_ref, question, errors, warnings)
+
+    # --- Print results ---
+    _print_validation_results(errors, warnings)
+    return 1 if errors else 0
+
+
+def _check_sql_gotchas(sql: str, filename: str, question_yaml: dict, errors: list, warnings: list):
+    """Check SQL content for known Metabase/Snowflake gotchas."""
+
+    # 1. Single-escaped regex (backslash-d, backslash-w, etc. without double escape)
+    #    Look for \d, \w, \s, \b that are NOT preceded by another backslash
+    single_escape = re.findall(r'(?<!\\)\\[dwsbDWSB]\+?', sql)
+    if single_escape:
+        # Filter out double-escaped ones (already correct)
+        truly_single = [m for m in single_escape if not any(
+            sql[max(0, sql.index(m)-1)] == '\\' for _ in [None]
+        )]
+        if truly_single:
+            warnings.append(
+                f"{filename}: possible single-escaped regex pattern(s): {', '.join(set(truly_single))}. "
+                f"Use double backslash (e.g. \\\\d+) — Metabase JSON serialization consumes one layer."
+            )
+
+    # 2. TRY_TO_TIMESTAMP or TO_TIMESTAMP with numeric argument
+    numeric_ts = re.findall(
+        r'(?:TRY_TO_TIMESTAMP|TO_TIMESTAMP)\s*\(\s*(?:TRY_TO_NUMBER|FLOOR|CEIL|ROUND|[A-Z_]+::(?:NUMBER|INTEGER|INT|FLOAT))',
+        sql, re.IGNORECASE
+    )
+    if numeric_ts:
+        warnings.append(
+            f"{filename}: numeric argument to TRY_TO_TIMESTAMP/TO_TIMESTAMP detected. "
+            f"Metabase's JDBC driver rejects this — use DATEADD from epoch instead. "
+            f"See model.md 'Snowflake SQL Gotchas' section 2."
+        )
+
+    # 3. Template variables without matching YAML parameters
+    template_vars = set(re.findall(r'\{\{([^#}][^}]*)\}\}', sql))
+    template_vars = {v.strip() for v in template_vars}
+    yaml_params = set(question_yaml.get('parameters', {}).keys())
+    untyped = template_vars - yaml_params
+    if untyped:
+        warnings.append(
+            f"{filename}: template variable(s) {', '.join(sorted(untyped))} found in SQL "
+            f"but not declared in question YAML parameters — they'll default to type 'text'."
+        )
+
+
+def _print_validation_results(errors: list, warnings: list):
+    """Print validation results."""
+    if not errors and not warnings:
+        print("✅ All checks passed")
+        return
+
+    for w in warnings:
+        print(f"⚠️  {w}")
+    for e in errors:
+        print(f"❌ {e}")
+
+    if errors:
+        print(f"\n{len(errors)} error(s), {len(warnings)} warning(s)")
+    else:
+        print(f"\n0 errors, {len(warnings)} warning(s) — safe to push")
 
 
 # =============================================================================
@@ -251,6 +417,14 @@ def setup_dashboard_parser(subparsers, common_parser):
     )
     push_parser.set_defaults(func=dashboard_push)
     
+    # Dashboard validate
+    validate_parser = dashboard_subparsers.add_parser(
+        'validate',
+        help='Validate dashboard YAML/SQL for common issues before pushing'
+    )
+    validate_parser.add_argument("--dir", type=str, required=True, help="Dashboard directory to validate")
+    validate_parser.set_defaults(func=dashboard_validate)
+
     # Dashboard format
     format_parser = dashboard_subparsers.add_parser(
         'format',

@@ -346,6 +346,7 @@ class Dashboard:
         from .question import Question
         
         updated_count = 0
+        created_count = 0
         failed_count = 0
         
         # Build a reverse map: file -> question_id
@@ -372,9 +373,26 @@ class Dashboard:
             question_id = file_to_id.get(rel_path_str)
             
             if not question_id:
-                logger.warning(f"No existing ID found for {rel_path_str}, skipping update")
+                # New question file not in state — create it
+                try:
+                    collection_id = self.state.get("dashboard", {}).get("collection_id")
+                    if not collection_id:
+                        logger.warning(f"No collection_id in state, skipping creation of {rel_path_str}")
+                        continue
+                    question = Question(question_file)
+                    new_question_id = question.post(
+                        collection_id=collection_id,
+                        database_id=database_id,
+                        debug=False
+                    )
+                    existing_state[new_question_id] = {"file": rel_path_str}
+                    created_count += 1
+                    logger.info(f"Created question {new_question_id}: {rel_path_str}")
+                except Exception as e:
+                    failed_count += 1
+                    logger.error(f"Failed to create {rel_path_str}: {e}")
                 continue
-            
+
             try:
                 # Update question using Question class
                 question = Question(question_file)
@@ -383,21 +401,25 @@ class Dashboard:
                     database_id=database_id,
                     debug=False
                 )
-                
+
                 updated_count += 1
                 logger.info(f"Updated question {question_id}: {rel_path_str}")
-            
+
             except Exception as e:
                 failed_count += 1
                 logger.error(f"Failed to update {rel_path_str} (ID {question_id}): {e}")
-        
+
         # Log summary
+        parts = []
+        if updated_count > 0:
+            parts.append(f"updated {updated_count}")
+        if created_count > 0:
+            parts.append(f"created {created_count}")
         if failed_count > 0:
-            logger.warning(f"Updated {updated_count}/{len(question_files)} questions ({failed_count} failed)")
-        else:
-            logger.info(f"Updated {updated_count} questions")
-        
-        # Return the same state (IDs don't change on update)
+            parts.append(f"{failed_count} failed")
+        logger.info(f"Questions: {', '.join(parts)}")
+
+        # Return updated state (includes new question IDs)
         return existing_state
 
 
@@ -1042,8 +1064,8 @@ class Dashboard:
                     logger.info(f"Creating {len(question_files)} questions")
                     question_state = dashboard._create_questions_with_state(actual_collection_id, database_id, debug)
                 else:
-                    # Update mode: questions already exist, update them
-                    logger.info(f"Updating {len(existing_questions)} questions")
+                    # Update mode: update existing, create new
+                    logger.info(f"Syncing {len(question_files)} questions ({len(existing_questions)} existing)")
                     question_state = dashboard._update_questions_with_state(existing_questions, database_id, debug)
                 
                 # Update state with question info and sync timestamp

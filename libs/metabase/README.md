@@ -243,6 +243,34 @@ parameter_mappings:
 
 **File Format**: See [model.md](./model.md) for complete YAML format documentation.
 
+### Validate Dashboard
+
+Check dashboard YAML/SQL files for common issues before pushing:
+
+```bash
+./run.sh metabase dashboard validate --dir <directory>
+```
+
+**What it checks:**
+- Dashboard structure (missing keys, broken question_file references, missing SQL files)
+- Parameter wiring (parameter_mappings reference valid dashboard parameter IDs)
+- Parameter defaults (number types should use array format `[2]` not scalar `2`)
+- SQL gotchas:
+  - Single-escaped regex (`\d+` instead of `\\d+`) — silently matches nothing in Metabase
+  - Numeric arguments to `TRY_TO_TIMESTAMP` / `TO_TIMESTAMP` — Metabase JDBC driver rejects these
+  - Template variables without YAML parameter declarations — default to type `text`
+
+**Examples:**
+
+```bash
+# Validate before pushing
+./run.sh metabase dashboard validate --dir my-dashboard/
+# ✅ All checks passed
+
+# Fix issues, then push
+./run.sh metabase dashboard push --dir my-dashboard/
+```
+
 ### Push Dashboard
 
 Create or update a dashboard in Metabase from a local directory (automatically handles questions and collections):
