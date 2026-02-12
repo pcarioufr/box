@@ -57,6 +57,7 @@ usage() {
     echo "  datadog fetch sessions   Fetch multiple sessions (by session or view query)"
     echo "  datadog fetch view       Fetch raw RUM view attributes as YAML"
     echo "  draw [open|api|stop]     Diagrams with Excalidraw (YAML push workflow)"
+    echo "  metabase dashboard       Pull/push Metabase dashboards (YAML format)"
     echo ""
     echo "Quick Start:"
     echo "  ./box.sh --setup                                             # First-time setup"
@@ -69,7 +70,9 @@ usage() {
     echo "  ./box.sh snowflake discover tables monitor                   # Find tables matching 'monitor'"
     echo "  ./box.sh datadog rum query \"@type:view\" --from-time 1h      # Query RUM events"
     echo "  ./box.sh draw                                                # Start Excalidraw"
-    echo "  ./box.sh draw api push diagram.yaml                            # Push YAML diagram"
+    echo "  ./box.sh draw api push diagram.yaml                          # Push YAML diagram"
+    echo "  ./box.sh metabase dashboard pull 75122 --dir my-dashboard/   # Pull Metabase dashboard"
+    echo "  ./box.sh metabase dashboard push --dir my-dashboard/         # Push dashboard changes"
     echo ""
     echo "For detailed help:"
     echo "  ./box.sh jira --help"
@@ -77,6 +80,7 @@ usage() {
     echo "  ./box.sh confluence --help"
     echo "  ./box.sh snowflake --help"
     echo "  ./box.sh datadog --help"
+    echo "  ./box.sh metabase --help"
     echo ""
 }
 
@@ -244,6 +248,12 @@ case "$COMMAND" in
     datadog)
         # Datadog RUM queries
         "$SHARED_VENV/bin/python" -m libs.datadog "$@"
+        exit $?
+        ;;
+
+    metabase)
+        # Metabase dashboard management
+        "$SHARED_VENV/bin/python" -m libs.metabase "$@"
         exit $?
         ;;
 
