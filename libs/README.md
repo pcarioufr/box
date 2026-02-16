@@ -231,6 +231,47 @@ connectors:
 
 ---
 
+### Analysis Library (`analysis/`)
+
+**Purpose**: Statistical analysis workflows for tabular data (CSV files)
+
+```bash
+# A/B test comparison (requires entities CSV + metrics YAML)
+./box.sh analysis compare --entities experiment.csv --metrics metrics.yaml
+
+# Exploratory analysis with clustering
+./box.sh analysis analyze --entities customer_data.csv
+./box.sh analysis analyze --entities customer_data.csv --clusters 4
+```
+
+**Workflows**:
+- **compare** - A/B test comparison with statistical significance testing (t-tests, chi-square, effect sizes, correlations)
+- **analyze** - Exploratory data analysis with k-means clustering and correlation analysis
+
+**Features**:
+- CSV-first input (no database required)
+- Statistical tests: t-tests, chi-square, Fisher's exact, Mann-Whitney U
+- Effect sizes: Cohen's d, relative lift, confidence intervals
+- K-means clustering with automatic k selection (silhouette method)
+- Correlation analysis: phi coefficient, point-biserial
+- YAML output with detailed statistical results
+- NULL handling strategies (per-metric, per-entity, error)
+
+**Architecture**:
+```
+libs/analysis/
+├── compare.py         # Workflow: A/B test comparison
+├── analyze.py         # Workflow: Exploratory analysis
+└── stats/             # Statistical utilities (building blocks)
+    ├── statistics.py  # Hypothesis testing
+    ├── correlations.py # Correlation analysis
+    └── clustering.py  # K-means clustering
+```
+
+**Documentation**: [libs/analysis/README.md](./analysis/README.md)
+
+---
+
 ### Common Library (`common/`)
 
 **Purpose**: Shared utilities used by multiple libraries
@@ -287,13 +328,22 @@ libs/
 ├── excalidraw/            # Excalidraw diagram API
 │   ├── __main__.py        # CLI entry point
 │   └── api.py             # Canvas API client
-└── metabase/              # Metabase dashboard management
+├── metabase/              # Metabase dashboard management
+│   ├── __main__.py        # CLI entry point
+│   ├── cli.py             # CLI routing
+│   ├── dashboard.py       # Dashboard pull/push
+│   ├── question.py        # Question operations
+│   ├── config.yaml        # Color palettes
+│   ├── model.md           # YAML format spec
+│   └── README.md          # Complete documentation
+└── analysis/              # Statistical analysis for CSV data
     ├── __main__.py        # CLI entry point
-    ├── cli.py             # CLI routing
-    ├── dashboard.py       # Dashboard pull/push
-    ├── question.py        # Question operations
-    ├── config.yaml        # Color palettes
-    ├── model.md           # YAML format spec
+    ├── compare.py         # A/B test comparison workflow
+    ├── analyze.py         # Exploratory analysis workflow
+    ├── stats/             # Statistical utilities
+    │   ├── statistics.py  # Hypothesis testing
+    │   ├── correlations.py # Correlation analysis
+    │   └── clustering.py  # K-means clustering
     └── README.md          # Complete documentation
 ```
 

@@ -58,6 +58,8 @@ usage() {
     echo "  datadog fetch view       Fetch raw RUM view attributes as YAML"
     echo "  draw [open|api|stop]     Diagrams with Excalidraw (YAML push workflow)"
     echo "  metabase dashboard       Pull/push Metabase dashboards (YAML format)"
+    echo "  analysis compare         A/B test comparison with statistical tests"
+    echo "  analysis analyze         Exploratory analysis with clustering"
     echo ""
     echo "Quick Start:"
     echo "  ./box.sh --setup                                             # First-time setup"
@@ -73,6 +75,8 @@ usage() {
     echo "  ./box.sh draw api push diagram.yaml                          # Push YAML diagram"
     echo "  ./box.sh metabase dashboard pull 75122 --dir my-dashboard/   # Pull Metabase dashboard"
     echo "  ./box.sh metabase dashboard push --dir my-dashboard/         # Push dashboard changes"
+    echo "  ./box.sh analysis compare --entities data.csv --metrics m.yaml  # A/B test comparison"
+    echo "  ./box.sh analysis analyze --entities data.csv --clusters 3   # Exploratory analysis"
     echo ""
     echo "For detailed help:"
     echo "  ./box.sh jira --help"
@@ -81,6 +85,7 @@ usage() {
     echo "  ./box.sh snowflake --help"
     echo "  ./box.sh datadog --help"
     echo "  ./box.sh metabase --help"
+    echo "  ./box.sh analysis --help"
     echo ""
 }
 
@@ -254,6 +259,12 @@ case "$COMMAND" in
     metabase)
         # Metabase dashboard management
         "$SHARED_VENV/bin/python" -m libs.metabase "$@"
+        exit $?
+        ;;
+
+    analysis)
+        # Statistical analysis for CSV data
+        "$SHARED_VENV/bin/python" -m libs.analysis "$@"
         exit $?
         ;;
 

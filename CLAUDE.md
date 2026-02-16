@@ -139,12 +139,31 @@ Each dashboard directory has a `.state.yaml` file that maps local files to Metab
 
 **See `libs/metabase/README.md` for complete documentation.**
 
+## Analysis (Statistical)
+
+Statistical analysis for CSV data: A/B test comparison and exploratory analysis with clustering.
+
+```bash
+# A/B test comparison (entities CSV + metrics YAML → statistical tests)
+./box.sh analysis compare --entities experiment.csv --metrics metrics.yaml
+
+# Exploratory analysis (entities CSV → clusters + correlations)
+./box.sh analysis analyze --entities customer_data.csv --clusters 4
+
+# Help
+./box.sh analysis --help
+```
+
+**See `./box.sh analysis --help` for input formats and examples, or `libs/analysis/README.md` for complete documentation.**
+
 ## Working Folders
 
-All data work is organized in date-based working folders under `data/`:
+Most work happens in **long-lived project directories** under `data/` (e.g., `data/monitorless-detection/`). Use the existing project folder when continuing work on an ongoing effort.
+
+For **new, standalone explorations**, create a date-based folder under `data/explorations/`:
 
 ```
-data/YYYY-MM-DD_short-description/
+data/explorations/YYYY-MM-DD_short-description/
 ├── master.md              # Summary of findings
 ├── datadog/               # RUM outputs
 ├── snowflake/             # Snowflake outputs
