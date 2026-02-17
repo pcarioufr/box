@@ -1,0 +1,238 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: #0d1117;
+    color: #c9d1d9;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.header {
+    background: #161b22;
+    color: #c9d1d9;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    border-bottom: 1px solid #21262d;
+}
+
+.header h1 {
+    font-size: 24px;
+    margin-bottom: 15px;
+    color: #58a6ff;
+    text-shadow: 0 0 10px rgba(88, 166, 255, 0.3);
+}
+
+.controls {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.control-group label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #8b949e;
+}
+
+input[type="file"] {
+    padding: 8px 12px;
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #c9d1d9;
+    transition: all 0.2s;
+}
+
+input[type="file"]:hover {
+    background: #30363d;
+    border-color: #58a6ff;
+    box-shadow: 0 0 8px rgba(88, 166, 255, 0.2);
+}
+
+input[type="number"] {
+    padding: 8px 12px;
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    width: 80px;
+    font-size: 14px;
+    color: #c9d1d9;
+    transition: all 0.2s;
+}
+
+input[type="number"]:focus {
+    outline: none;
+    border-color: #58a6ff;
+    box-shadow: 0 0 8px rgba(88, 166, 255, 0.2);
+}
+
+button {
+    padding: 8px 16px;
+    background: #238636;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    box-shadow: 0 0 8px rgba(35, 134, 54, 0.3);
+}
+
+button:hover {
+    background: #2ea043;
+    box-shadow: 0 0 12px rgba(46, 160, 67, 0.5);
+    transform: translateY(-1px);
+}
+
+button:disabled {
+    background: #30363d;
+    color: #6e7681;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+select {
+    padding: 8px 12px;
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #c9d1d9;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+select:hover {
+    border-color: #58a6ff;
+    box-shadow: 0 0 8px rgba(88, 166, 255, 0.2);
+}
+
+select:focus {
+    outline: none;
+    border-color: #58a6ff;
+}
+
+.stats {
+    display: flex;
+    gap: 20px;
+    margin-top: 10px;
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.stat-item {
+    display: flex;
+    gap: 5px;
+    color: #8b949e;
+}
+
+.stat-label {
+    font-weight: 600;
+    color: #c9d1d9;
+}
+
+.container {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+#cy {
+    flex: 1;
+    background: #0d1117;
+    margin: 20px;
+    border-radius: 8px;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+    border: 1px solid #21262d;
+}
+
+.message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: #6e7681;
+    font-size: 18px;
+}
+
+.error {
+    color: #f85149;
+    padding: 10px;
+    background: rgba(248, 81, 73, 0.1);
+    border: 1px solid rgba(248, 81, 73, 0.3);
+    border-radius: 6px;
+    margin-top: 10px;
+    font-size: 14px;
+    box-shadow: 0 0 8px rgba(248, 81, 73, 0.2);
+}
+
+.legend {
+    position: absolute;
+    bottom: 30px;
+    left: 30px;
+    background: #161b22;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #30363d;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    font-size: 14px;
+    display: none;
+}
+
+.legend h3 {
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: #58a6ff;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 5px 0;
+    color: #8b949e;
+}
+
+.legend-color {
+    width: 30px;
+    height: 3px;
+    background: #58a6ff;
+    box-shadow: 0 0 6px rgba(88, 166, 255, 0.5);
+}
+
+/* Custom scrollbar for dark mode */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0d1117;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #484f58;
+}

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Viewer</title>
+
+    <!-- External Libraries -->
+    <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+    <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+    <script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
+
+    <!-- Local Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="header">
+        <h1>Graph Viewer</h1>
+        <div class="controls">
+            <div class="control-group">
+                <label>Data:</label>
+                <input type="file" id="fileInput" accept=".csv" />
+            </div>
+            <div class="control-group">
+                <label>Threshold (%):</label>
+                <input type="number" id="threshold" value="10" min="0" max="100" step="1" />
+            </div>
+            <button id="uploadBtn" disabled>Load Graph</button>
+            <div class="control-group">
+                <label>Layout:</label>
+                <select id="layoutSelect" disabled>
+                    <option value="dagre">Hierarchical (DAG)</option>
+                    <option value="circle">Circle</option>
+                    <option value="grid">Grid</option>
+                    <option value="concentric">Concentric</option>
+                    <option value="breadthfirst">Breadth First</option>
+                    <option value="cose">Force Directed</option>
+                </select>
+            </div>
+        </div>
+        <div class="stats" id="stats" style="display: none;">
+            <div class="stat-item">
+                <span class="stat-label">Nodes:</span>
+                <span id="statNodes">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Edges:</span>
+                <span id="statEdges">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Total edges in data:</span>
+                <span id="statTotal">0</span>
+            </div>
+        </div>
+        <div id="error" class="error" style="display: none;"></div>
+    </div>
+
+    <div class="container">
+        <div id="cy">
+            <div class="message">Upload a CSV file to visualize a directed graph</div>
+        </div>
+        <div class="legend" id="legend">
+            <h3>Interaction</h3>
+            <div class="legend-item">
+                <span>• Click and drag to pan</span>
+            </div>
+            <div class="legend-item">
+                <span>• Scroll to zoom</span>
+            </div>
+            <div class="legend-item">
+                <span>• Hover nodes to highlight connections</span>
+            </div>
+            <div class="legend-item">
+                <span>• Click node/edge for details</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Local Scripts -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
