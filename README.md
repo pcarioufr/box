@@ -95,3 +95,10 @@ The `services/` directory contains Docker services orchestrated via `docker-comp
   - `./box.sh draw list` - List saved diagrams
   - See [services/excalidraw/README.md](services/excalidraw/README.md) for API documentation
 
+- **Graph Viewer** - Interactive directed graph visualizer at http://localhost:5001
+  - Upload CSV data (source, target, weight)
+  - Filter by weight threshold
+  - Multiple graph layouts (DAG, force-directed, circular, etc.)
+  - Dark mode interface with dynamic edge width mapping
+  - See [services/graph-viewer/README.md](services/graph-viewer/README.md) for details
+

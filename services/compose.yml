@@ -20,3 +20,15 @@ services:
       - ./excalidraw/src:/app/src:ro
       - ./excalidraw/frontend:/frontend:ro
     restart: unless-stopped
+
+  graph-viewer:
+    build: ./graph-viewer
+    container_name: graph-viewer
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./graph-viewer/app.py:/app/app.py:ro
+      - ./graph-viewer/templates:/app/templates:ro
+      - ./graph-viewer/static:/app/static:ro
+      - ../data:/data:ro
+    restart: unless-stopped

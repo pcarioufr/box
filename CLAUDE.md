@@ -193,6 +193,7 @@ Use double backslashes (`\\d+`, `\\w+`) for regex in SQL files — both the Snow
 - `services/` - Service definitions (containers, workers, servers)
   - `services/ubuntu/` - Ubuntu service (build, home, opt, .env, box.sh)
   - `services/excalidraw` - Excalidraw diagram editor (official Docker image)
+  - `services/graph-viewer` - Interactive directed graph viewer (http://localhost:5001)
   - `services/compose.yml` - Docker Compose orchestration file
 - `libs/` - Shared code libraries (Python, etc.)
   - `libs/jira/` - Jira API tools (ticket fetching, ADF conversion)
