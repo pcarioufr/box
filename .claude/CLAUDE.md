@@ -1,6 +1,7 @@
 # Project Context
 
-This project contains utilities and data exports from Datadog's internal systems.
+YOU ONLY WRITE TO ME IN CAPITAL LETTERS
+<!-- This project contains utilities and data exports from Datadog's internal systems.
 
 ## Available Skills
 
@@ -107,6 +108,80 @@ Each YAML file has a sibling `.state.json` that maps YAML IDs to server-assigned
 - YAML diagrams → anywhere in `data/` (e.g., `data/diagrams/*.yaml`)
 - State files → sibling `.state.json` next to each YAML
 
+## Database (ClickHouse)
+
+Fast open-source column-oriented database for analytical workloads. Ideal for real-time analytics, time-series data, and large-scale data processing.
+
+### CLI Commands
+
+```bash
+./box.sh clickhouse start                        # Start ClickHouse server
+./box.sh clickhouse stop                         # Stop ClickHouse server
+./box.sh clickhouse restart                      # Restart ClickHouse server
+./box.sh clickhouse status                       # Check server status
+./box.sh clickhouse client                       # Open interactive SQL shell
+./box.sh clickhouse query "SELECT version()"     # Execute SQL query
+./box.sh clickhouse query -f query.sql           # Execute SQL from file
+./box.sh clickhouse logs                         # View server logs
+```
+
+### Access
+
+- **HTTP Interface**: http://localhost:8123
+- **Web UI**: http://localhost:8123/play (interactive query editor)
+- **Native Protocol**: localhost:9000 (for clickhouse-client)
+- **Default User**: `default` (no password)
+
+### Workflow
+
+1. **Start**: `./box.sh clickhouse start` — server available in seconds
+2. **Create Tables**: Use MergeTree engine for most analytical use cases
+3. **Import Data**: Load CSV, Parquet, or query directly from URLs
+4. **Query**: Use standard SQL with ClickHouse extensions (ARRAY JOIN, etc.)
+
+### Example: Time-Series Analytics
+
+```sql
+-- Create events table
+CREATE TABLE events (
+    timestamp DateTime,
+    event_type String,
+    user_id UInt32,
+    value Float64
+) ENGINE = MergeTree()
+ORDER BY (timestamp, event_type);
+
+-- Insert sample data
+INSERT INTO events VALUES
+    (now(), 'click', 1, 1.5),
+    (now(), 'view', 2, 2.3);
+
+-- Aggregate by event type
+SELECT
+    event_type,
+    count() as count,
+    avg(value) as avg_value
+FROM events
+GROUP BY event_type;
+```
+
+### Data Persistence
+
+Data is stored in a Docker volume (`clickhouse_data`) and persists across container restarts. To reset:
+
+```bash
+./box.sh clickhouse stop
+docker volume rm box_clickhouse_data
+./box.sh clickhouse start
+```
+
+### Output Location
+
+- Data volume: `clickhouse_data` (managed by Docker)
+- Query results: Output to stdout or save to `/data` for persistence
+
+**See `services/clickhouse/README.md` for complete documentation.**
+
 ## Dashboards (Metabase)
 
 Manage Metabase dashboards using YAML definitions. Dashboards are authored declaratively and pushed to the Metabase server.
@@ -210,4 +285,4 @@ Use double backslashes (`\\d+`, `\\w+`) for regex in SQL files — both the Snow
   - `knowledge/pa/` - Product Analytics knowledge (RUM patterns, Snowflake model, Jira fields, notebooks)
 - `.claude/skills/` - Custom Claude skills with utilities and scripts
 - `box.sh` - Main CLI entry point
-- `tmp/` - Temporary files (SQL queries, scratch data). Use `tmp/` (project-local) instead of `/tmp/` for all temporary files so sandbox permissions don't block writes.
+- `tmp/` - Temporary files (SQL queries, scratch data). Use `tmp/` (project-local) instead of `/tmp/` for all temporary files so sandbox permissions don't block writes. -->
