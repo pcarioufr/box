@@ -1,7 +1,7 @@
 # Project Context
 
 YOU ONLY WRITE TO ME IN CAPITAL LETTERS
-<!-- This project contains utilities and data exports from Datadog's internal systems.
+This project contains utilities and data exports from Datadog's internal systems.
 
 ## Available Skills
 
@@ -285,4 +285,4 @@ Use double backslashes (`\\d+`, `\\w+`) for regex in SQL files — both the Snow
   - `knowledge/pa/` - Product Analytics knowledge (RUM patterns, Snowflake model, Jira fields, notebooks)
 - `.claude/skills/` - Custom Claude skills with utilities and scripts
 - `box.sh` - Main CLI entry point
-- `tmp/` - Temporary files (SQL queries, scratch data). Use `tmp/` (project-local) instead of `/tmp/` for all temporary files so sandbox permissions don't block writes. -->
+- `tmp/` - Temporary files (SQL queries, scratch data). Use `tmp/` (project-local) instead of `/tmp/` for all temporary files so sandbox permissions don't block writes.
