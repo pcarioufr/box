@@ -137,7 +137,7 @@ This repository uses a **unified runner pattern**: All libraries are accessed th
 - Bidirectional workflow: edit JSON locally, push to Datadog
 - Working folder organization
 
-**Notebook Documentation**: [knowledge/datadog-notebooks.md](../knowledge/datadog-notebooks.md)
+**Notebook Documentation**: [libs/datadog/NOTEBOOKS.md](datadog/NOTEBOOKS.md)
 
 ---
 

@@ -173,7 +173,7 @@ def main():
     parser = argparse.ArgumentParser(
         prog='datadog',
         description='Datadog CLI - Tools for querying RUM data and creating notebooks',
-        epilog='For detailed help: datadog rum --help | datadog notebook --help | datadog fetch --help'
+        epilog='For detailed help: datadog rum --help | datadog notebook --help | datadog fetch --help\nFor best practices: see libs/datadog/README.md'
     )
 
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
@@ -379,7 +379,7 @@ ENVIRONMENT VARIABLES REQUIRED:
 NOTEBOOK FORMAT:
   Uses the standard Datadog Notebooks API format.
   See: https://docs.datadoghq.com/api/latest/notebooks/#create-a-notebook
-  See: knowledge/datadog-notebooks.md for examples and reference
+  See: libs/datadog/NOTEBOOKS.md for examples and reference
 
 EXAMPLES:
   # Create notebook from JSON file
@@ -390,7 +390,7 @@ EXAMPLES:
 
 The notebook ID is automatically written back to the source file after creation.
 
-For complete examples, see: knowledge/datadog-notebooks.md
+For complete examples, see: libs/datadog/NOTEBOOKS.md
 ''',
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -434,7 +434,7 @@ EXAMPLES:
   # Update notebook from stdin
   cat notebook.json | datadog notebook update -
 
-For complete examples, see: knowledge/datadog-notebooks.md
+For complete examples, see: libs/datadog/NOTEBOOKS.md
 ''',
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
