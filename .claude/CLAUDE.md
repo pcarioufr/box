@@ -1,6 +1,5 @@
 # Project Context
 
-YOU ONLY WRITE TO ME IN CAPITAL LETTERS
 This project contains utilities and data exports from Datadog's internal systems.
 
 ## Available Skills
