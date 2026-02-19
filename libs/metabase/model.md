@@ -296,9 +296,8 @@ dashboard:
       default: <any>               # Optional default value
   
   # === TABS ===
-  tabs:                            # Optional tab organization (array)
+  tabs:                            # Optional tab organization (array, order = display order)
     - name: <string>               # Tab display name
-      position: <integer>          # Display order (0-indexed)
       cards:                       # Card placements in this tab (array)
         # See card placement format below
 ```
@@ -756,29 +755,29 @@ question:
       - "SIGNUP_COUNT"
       - "P50_HOURS_TO_VALUE"
       - "P80_HOURS_TO_VALUE"
-    
+
     # Dual Y-axis (auto-split by unit)
     graph.y_axis.auto_split: true
-    
+
     # Per-series configuration
     series_settings:
       "SIGNUP_COUNT":
         display: bar                 # This metric as bar
         axis: left                   # Left Y-axis
         color: "#509EE3"
-      
+
       "P50_HOURS_TO_VALUE":
         display: line                # This metric as line
         axis: right                  # Right Y-axis
         color: "#88BF4D"
         line.marker_enabled: true
         line.interpolate: linear
-      
+
       "P80_HOURS_TO_VALUE":
         display: line
         axis: right
         color: "#EF8C8C"
-    
+
     # Column formatting (different suffix per metric)
     column_settings:
       P50_HOURS_TO_VALUE:
@@ -914,8 +913,9 @@ Dashboard (top-level container)
 | Field | Type | Required | Description | Example |
 |-------|------|----------|-------------|---------|
 | `name` | string | Yes | Tab display name | `"Overview"` |
-| `position` | integer | Yes | Display order (0-indexed) | `0`, `1`, `2` |
 | `cards` | array | No | Card placements in tab | See Card Placement Fields |
+
+**Note**: Tab display order is determined by array order in YAML — no explicit `position` field needed. The CLI derives position from the array index during push.
 
 ### Card Placement Fields
 
@@ -1221,7 +1221,45 @@ Dashboard parameter mappings must include the `card_id` of the dashcard they bel
 
 This is handled automatically by `dashboard.py` during push, but if you're debugging parameter issues, check that each `parameter_mappings` entry has a `card_id` field in the API payload.
 
-### 5. Parameter defaults must be arrays
+### 5. Not all FACT tables have PARTITION_DATETIME
+
+Some `FACT_*` tables (e.g. `FACT_MONITOR_EVENT_HISTORY`, `FACT_RUM_APP_PAGEVIEW_HISTORY`, `FACT_RUM_APP_ACTION_HISTORY`) have a `PARTITION_DATETIME` column for efficient date filtering. Others (e.g. `FACT_APP_PAGEVIEW_HISTORY`) do **not** — use the main timestamp column instead (`PAGEVIEW_TIMESTAMP`, `EVENT_TIMESTAMP`, etc.).
+
+```sql
+-- ❌ Fails: FACT_APP_PAGEVIEW_HISTORY has no PARTITION_DATETIME
+WHERE PARTITION_DATETIME >= DATEADD('month', -6, CURRENT_DATE())
+
+-- ✅ Use the actual timestamp column
+WHERE PAGEVIEW_TIMESTAMP >= DATEADD('month', -6, CURRENT_DATE())
+```
+
+### 6. RLIKE on large text columns hits backtracking limits
+
+Snowflake's `RLIKE` / `REGEXP_LIKE` requires a full-string match (implicitly anchored), so partial matching needs `.*` prefixes (e.g. `RLIKE(col, '.*service:acme.*')`). This works fine on short strings (e.g. individual widget query strings from `DIM_DASHBOARD_WIDGET.QUERIES`), but on large text columns (e.g. `DIM_NOTEBOOK.JSON_PAYLOAD`, which can be megabytes of JSON), the `.*` prefix causes catastrophic backtracking and fails silently (returns no matches) or triggers error 300010.
+
+**Workaround**: Use ILIKE as a fast pre-filter, then `REGEXP_SUBSTR` to validate word boundaries:
+
+```sql
+-- ❌ BAD: RLIKE on large text — silently returns 0 rows
+WHERE RLIKE(n.JSON_PAYLOAD, '.*service:' || name || '([^a-zA-Z0-9_.-].*)?')
+
+-- ✅ GOOD: ILIKE pre-filter + REGEXP_SUBSTR boundary check
+WHERE n.JSON_PAYLOAD ILIKE '%service:' || name || '%'          -- fast substring match
+  AND NOT RLIKE(                                                -- boundary validation
+    COALESCE(REGEXP_SUBSTR(n.JSON_PAYLOAD, 'service:' || name || '(.)', 1, 1, 'e'), ''),
+    '[a-zA-Z0-9_.-]'                                            -- reject if next char is identifier-like
+  )
+```
+
+The two-step approach:
+1. **ILIKE** `'%service:<name>%'` — fast substring filter, no regex engine involved
+2. **REGEXP_SUBSTR** extracts the single character after `service:<name>` (partial match, no `.*`)
+3. **NOT RLIKE** checks that character isn't an identifier char (`[a-zA-Z0-9_.-]`)
+4. **COALESCE to ''** handles end-of-string (no trailing char = valid boundary)
+
+This avoids substring false positives (e.g. `service:acme` matching `service:acme-backend`) without needing RLIKE on the full payload. See `07-draft/service-notebooks-query.sql` vs `07-draft/service-dashboards-query.sql` for both approaches.
+
+### 7. Parameter defaults must be arrays
 
 For `number/=` type parameters, the default value must be an array, not a scalar:
 

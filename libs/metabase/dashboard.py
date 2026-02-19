@@ -559,19 +559,20 @@ class Dashboard:
         tabs = dashboard.get("tabs", [])
         
         # Prepare tabs for Metabase
+        # Position is derived from array order — no explicit position field needed in YAML
         if tabs:
             json_def["tabs"] = []
-            for tab in tabs:
+            for tab_index, tab in enumerate(tabs):
                 tab_data = {
-                    "id": -(tab.get("position", 0) + 1),  # Use position to generate ID
+                    "id": -(tab_index + 1),
                     "name": tab["name"],
-                    "position": tab["position"]
+                    "position": tab_index
                 }
                 json_def["tabs"].append(tab_data)
-        
+
         # Process cards from tabs
         for tab_index, tab in enumerate(tabs):
-            tab_id = -(tab.get("position", 0) + 1)  # Same ID generation as above
+            tab_id = -(tab_index + 1)
             cards = tab.get("cards", [])
             
             for card_index, card in enumerate(cards):
@@ -631,10 +632,10 @@ class Dashboard:
             yaml_def["dashboard"]["tabs"] = []
             for tab in sorted(tabs, key=lambda t: t.get("position", 0)):
                 tab_yaml = {
-                    "id": tab.get("id"),
                     "name": tab.get("name"),
-                    "position": tab.get("position", 0)
                 }
+                if tab.get("id") is not None:
+                    tab_yaml["id"] = tab["id"]
                 yaml_def["dashboard"]["tabs"].append(tab_yaml)
         
         # Process parameters (under dashboard)
