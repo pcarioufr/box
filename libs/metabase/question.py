@@ -158,7 +158,7 @@ def yaml_to_json_question(question_yaml: Dict[str, Any], yaml_path: Path, databa
     if 'visualization_settings' in question_yaml:
         viz_yaml = question_yaml['visualization_settings']
         viz_json = {}
-        
+
         for key, value in viz_yaml.items():
             if key == 'column_settings' and isinstance(value, dict):
                 # Convert column_settings from simple keys to ["name", "KEY"] format
@@ -178,9 +178,15 @@ def yaml_to_json_question(question_yaml: Dict[str, Any], yaml_path: Path, databa
                 viz_json[key] = convert_colors_in_dict(value, direction='to_hex')
             elif isinstance(value, dict):
                 viz_json[key] = convert_colors_in_dict(value, direction='to_hex')
+            elif isinstance(value, list):
+                # Convert colors in list items (e.g. table.column_formatting rules)
+                viz_json[key] = [
+                    convert_colors_in_dict(item, direction='to_hex') if isinstance(item, dict) else item
+                    for item in value
+                ]
             else:
                 viz_json[key] = value
-        
+
         question_json['visualization_settings'] = viz_json
     
     return question_json
@@ -247,50 +253,56 @@ def json_to_yaml_question(question_json: Dict[str, Any], metabase_url: Optional[
     # Handles: column_settings (simple keys), graph.tooltip_columns (simple strings), colors (to palette names)
     if question_json.get("visualization_settings"):
         viz_json = question_json["visualization_settings"]
-    viz_yaml = {}
-    
-    for key, value in viz_json.items():
-        if key == 'column_settings' and isinstance(value, dict):
-            # Convert column_settings from ["name", "KEY"] format to simple keys
-            converted = {}
-            for col_key, col_settings in value.items():
-                # Try to parse JSON array format: '["name","COLUMN_NAME"]'
-                try:
-                    parsed = json.loads(col_key)
-                    if isinstance(parsed, list) and len(parsed) == 2 and parsed[0] == "name":
-                        simple_key = parsed[1]
-                    else:
-                        simple_key = col_key  # Keep as-is if not expected format
-                except (json.JSONDecodeError, TypeError):
-                    simple_key = col_key  # Keep as-is if not JSON
-                
-                converted_settings = convert_colors_in_dict(col_settings, direction='to_name')
-                converted[simple_key] = converted_settings
-            viz_yaml[key] = converted
-        elif key == 'graph.tooltip_columns' and isinstance(value, list):
-            # Convert tooltip columns from ["name", "KEY"] format to simple strings
-            converted = []
-            for item in value:
-                if isinstance(item, list) and len(item) == 2 and item[0] == "name":
-                    converted.append(item[1])
-                elif isinstance(item, str):
-                    # Try to parse if it's a JSON string
+        viz_yaml = {}
+
+        for key, value in viz_json.items():
+            if key == 'column_settings' and isinstance(value, dict):
+                # Convert column_settings from ["name", "KEY"] format to simple keys
+                converted = {}
+                for col_key, col_settings in value.items():
+                    # Try to parse JSON array format: '["name","COLUMN_NAME"]'
                     try:
-                        parsed = json.loads(item)
+                        parsed = json.loads(col_key)
                         if isinstance(parsed, list) and len(parsed) == 2 and parsed[0] == "name":
-                            converted.append(parsed[1])
+                            simple_key = parsed[1]
                         else:
-                            converted.append(item)
+                            simple_key = col_key  # Keep as-is if not expected format
                     except (json.JSONDecodeError, TypeError):
-                        converted.append(item)
-                else:
-                    converted.append(item)  # Keep as-is if not expected format
-            viz_yaml[key] = converted
-        elif isinstance(value, dict):
-            viz_yaml[key] = convert_colors_in_dict(value, direction='to_name')
-        else:
-            viz_yaml[key] = value
-    
+                        simple_key = col_key  # Keep as-is if not JSON
+
+                    converted_settings = convert_colors_in_dict(col_settings, direction='to_name')
+                    converted[simple_key] = converted_settings
+                viz_yaml[key] = converted
+            elif key == 'graph.tooltip_columns' and isinstance(value, list):
+                # Convert tooltip columns from ["name", "KEY"] format to simple strings
+                converted = []
+                for item in value:
+                    if isinstance(item, list) and len(item) == 2 and item[0] == "name":
+                        converted.append(item[1])
+                    elif isinstance(item, str):
+                        # Try to parse if it's a JSON string
+                        try:
+                            parsed = json.loads(item)
+                            if isinstance(parsed, list) and len(parsed) == 2 and parsed[0] == "name":
+                                converted.append(parsed[1])
+                            else:
+                                converted.append(item)
+                        except (json.JSONDecodeError, TypeError):
+                            converted.append(item)
+                    else:
+                        converted.append(item)  # Keep as-is if not expected format
+                viz_yaml[key] = converted
+            elif isinstance(value, dict):
+                viz_yaml[key] = convert_colors_in_dict(value, direction='to_name')
+            elif isinstance(value, list):
+                # Convert colors in list items (e.g. table.column_formatting rules)
+                viz_yaml[key] = [
+                    convert_colors_in_dict(item, direction='to_name') if isinstance(item, dict) else item
+                    for item in value
+                ]
+            else:
+                viz_yaml[key] = value
+
         question_yaml["question"]["visualization_settings"] = viz_yaml
     
     return question_yaml
