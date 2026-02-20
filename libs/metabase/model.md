@@ -560,6 +560,16 @@ question:
       - name: "AVG_M3_REVENUE"
         enabled: true
     
+    # Conditional formatting rules
+    table.column_formatting:
+      - columns: ["STATUS"]
+        type: single
+        operator: contains
+        value: "alert"
+        color: "#ED6E6E"
+        highlight_row: false
+        id: 0
+
     # Column formatting
     column_settings:
       AVG_M3_REVENUE:                # SQL column name
@@ -568,12 +578,12 @@ question:
         decimals: 0                   # Decimal places
         number_separators: ", "       # Thousands separator
         show_mini_bar: true          # Inline bar chart
-      
+
       NET_RETENTION_RATIO:
         decimals: 2
         suffix: " x"
         show_mini_bar: true
-      
+
       ADOPTION_PCT:
         column_title: "M3 # Adoption"
         scale: 100                    # Convert 0.75 → 75
@@ -1029,6 +1039,38 @@ The simple string format is automatically converted to Metabase's internal forma
 | Property | Type | Description | Values |
 |----------|------|-------------|--------|
 | `table.columns` | array | Column visibility | Array of `{name, enabled}` |
+| `table.column_formatting` | array | Conditional formatting rules | Array of rule objects (see below) |
+
+**Conditional Formatting Rule** (`table.column_formatting[]`):
+
+| Field | Type | Description | Values |
+|-------|------|-------------|--------|
+| `columns` | array | Column names to apply rule to | `["MY_COLUMN"]` |
+| `type` | string | Match type | `"single"` (value match) |
+| `operator` | string | Comparison operator | `"contains"`, `"="`, `"<"`, `">"`, `">="`, `"<="`, `"!="`, `"is-null"`, `"not-null"` |
+| `value` | any | Value to compare against | `"min"`, `42`, etc. |
+| `color` | string | Background color | Hex code (`"#88bf4d"`) or palette name |
+| `highlight_row` | boolean | Highlight entire row | `true`, `false` |
+| `id` | integer | Rule ID (ordering) | `0`, `1`, `2`, … |
+
+Example:
+```yaml
+table.column_formatting:
+  - columns: ["LAST_ALERT_BEFORE_IMPACT"]
+    type: single
+    operator: contains
+    value: "min"
+    color: "#88bf4d"
+    highlight_row: false
+    id: 0
+  - columns: ["LAST_ALERT_BEFORE_IMPACT"]
+    type: single
+    operator: contains
+    value: "h"
+    color: "#A7D07C"
+    highlight_row: false
+    id: 1
+```
 
 ### Dashboard Parameter Fields
 
