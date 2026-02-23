@@ -315,6 +315,9 @@ Two types of card placements exist:
     size_x: <integer>              # Width in grid units (max 24)
     size_y: <integer>              # Height in grid units
   card_id: <integer>               # Metabase question ID (direct reference)
+  card_settings:                   # Optional card-level visualization overrides
+    graph.x_axis.labels_enabled: false   # Hide X-axis tick labels
+    graph.y_axis.labels_enabled: false   # Hide Y-axis tick labels
   parameter_mappings:              # Optional parameter mappings (array)
     - parameter_id: <string>       # Dashboard parameter ID
       target: <string|array>       # Mapping target (simple or complex format)
@@ -324,6 +327,7 @@ Two types of card placements exist:
 - **Position must be a nested object** - Common mistake is to use flat format (row/col at card level)
 - Field is `card_id` (direct reference), or legacy `card.question_id` (nested format)
 - All position fields (row, col, size_x, size_y) are required
+- **card_settings** overrides visualization at the dashboard card level (not the question). Use for per-card display tweaks like hiding axis labels. Keys are raw Metabase `visualization_settings` keys (e.g. `graph.x_axis.labels_enabled`). Omitted keys use Metabase defaults (labels enabled).
 
 **Common Error:**
 ```yaml
@@ -1301,7 +1305,27 @@ The two-step approach:
 
 This avoids substring false positives (e.g. `service:acme` matching `service:acme-backend`) without needing RLIKE on the full payload. See `07-draft/service-notebooks-query.sql` vs `07-draft/service-dashboards-query.sql` for both approaches.
 
-### 7. Parameter defaults must be arrays
+### 7. No non-capturing groups in REGEXP_EXTRACT_ALL
+
+Snowflake's `REGEXP_EXTRACT_ALL` uses the ICU regex engine, which does **not** support non-capturing groups (`(?:...)`). Using them raises:
+
+```
+Invalid regular expression: '...', no argument for repetition operator: ?
+```
+
+The `?` after `)` is interpreted as a quantifier with no atom to repeat. Avoid non-capturing groups entirely in `REGEXP_EXTRACT_ALL` patterns. Rewrite optional suffixes using character classes or alternation:
+
+```sql
+-- ❌ BAD: non-capturing group causes "no argument for repetition operator: ?"
+REGEXP_EXTRACT_ALL(col, '@[a-zA-Z0-9_.+-]+(?:@[a-zA-Z0-9_.-]+\.[a-zA-Z]{2,})?')
+
+-- ✅ GOOD: include @ in the character class to match email-style handles natively
+REGEXP_EXTRACT_ALL(col, '@[a-zA-Z0-9_.+\\-@]+')
+```
+
+Note: `RLIKE` / `REGEXP_LIKE` / `REGEXP_SUBSTR` do support `(?:...)` — the limitation is specific to `REGEXP_EXTRACT_ALL`.
+
+### 8. Parameter defaults must be arrays
 
 For `number/=` type parameters, the default value must be an array, not a scalar:
 

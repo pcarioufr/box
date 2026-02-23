@@ -518,6 +518,10 @@ class Dashboard:
                     elif text_align == "right":
                         dashcard["visualization_settings"]["text.align_horizontal"] = "right"
                     # left is default, no need to set
+            # Card-level visualization settings (e.g. axis label toggles)
+            if "card_settings" in card:
+                dashcard["visualization_settings"] = dict(card["card_settings"])
+
             # Parameter mappings
             if "parameter_mappings" in card:
                 dashcard["parameter_mappings"] = []
@@ -688,11 +692,11 @@ class Dashboard:
                     card_yaml["virtual_card"] = {
                         "display": vcard_data.get("display", "text")
                     }
-                    
+
                     # Extract text from visualization_settings (it's at the top level)
                     if "text" in vis_settings:
                         card_yaml["virtual_card"]["text"] = vis_settings["text"]
-                    
+
                     # Extract text alignment
                     text_align = vis_settings.get("text.align_horizontal")
                     if text_align == "center":
@@ -700,6 +704,9 @@ class Dashboard:
                     elif text_align == "right":
                         card_yaml["virtual_card"]["text_align"] = "right"
                     # left is default, no need to include
+                elif vis_settings:
+                    # Regular card with card-level visualization overrides
+                    card_yaml["card_settings"] = dict(vis_settings)
                 
                 # Tab reference (temporary, will be removed when organizing by tab)
                 if dashcard.get("dashboard_tab_id"):
