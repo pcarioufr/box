@@ -13,6 +13,18 @@ The tools run locally via `./box.sh`, with some commands optionally using a Dock
 > **Note:** This repo is public, but the `knowledge/` and `data/` directories are gitignored - they contain proprietary context specific to my work.
 
 
+## Sibling Directories
+
+Code from external GitHub projects is stored in sibling directories under `../Code/`:
+
+```
+../Code/
+  acme/             # acme org's internal GitHub repositories
+    acme-analytics  # acme analytics Github repository
+    acme-core       # acme core Github repository
+  beta/             # beta project Github repository 
+```
+
 ## Setup
 
 ```bash
