@@ -64,7 +64,8 @@ def dashboard_push(args):
             directory=Path(args.dir),
             collection_id=args.parent if hasattr(args, 'parent') else None,
             database_id=args.database if hasattr(args, 'database') else None,
-            debug=args.debug
+            debug=args.debug,
+            question_filter=args.questions if hasattr(args, 'questions') and args.questions else None
         )
         return 0
     except ValueError as e:
@@ -414,6 +415,13 @@ def setup_dashboard_parser(subparsers, common_parser):
         type=int,
         default=default_database_int,
         help=database_help
+    )
+    push_parser.add_argument(
+        "--question",
+        action="append",
+        dest="questions",
+        metavar="FILE",
+        help="Only push this question file (relative to --dir). Repeat to push multiple. Dashboard definition is always pushed."
     )
     push_parser.set_defaults(func=dashboard_push)
     
