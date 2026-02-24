@@ -330,25 +330,33 @@ class Dashboard:
         self,
         existing_state: Dict[int, Any],
         database_id: int,
-        debug: bool = False
+        debug: bool = False,
+        question_filter: Optional[List[str]] = None
     ) -> Dict[int, Any]:
         """
         Update existing questions from local files.
-        
+
         Args:
             existing_state: Current question state (ID -> {file})
             database_id: Database ID for questions (deployment detail)
             debug: Enable debug output
-        
+            question_filter: Optional list of relative file paths to update. When provided,
+                             only those files are pushed; all others are skipped (but their
+                             existing state entries are preserved for the dashboard PUT).
+
         Returns:
             Updated state mapping (same structure as input)
         """
         from .question import Question
-        
+
         updated_count = 0
         created_count = 0
+        skipped_count = 0
         failed_count = 0
-        
+
+        # Normalise filter to a set of strings for O(1) lookup
+        filter_set = set(question_filter) if question_filter else None
+
         # Build a reverse map: file -> question_id
         file_to_id = {}
         for question_id, info in existing_state.items():
@@ -356,22 +364,27 @@ class Dashboard:
                 file_path = info.get("file")
                 if file_path:
                     file_to_id[file_path] = question_id
-        
+
         # Find all question YAML files
         question_files = self._find_question_files()
-        
+
         if not question_files:
             logger.warning(f"No question YAML files found in {self.dir}")
             return existing_state
-        
+
         # Update each question
         for question_file in question_files:
             rel_path = question_file.relative_to(self.dir)
             rel_path_str = str(rel_path)
-            
+
+            # When a filter is active, skip questions not in it
+            if filter_set is not None and rel_path_str not in filter_set:
+                skipped_count += 1
+                continue
+
             # Get the existing question ID for this file
             question_id = file_to_id.get(rel_path_str)
-            
+
             if not question_id:
                 # New question file not in state — create it
                 try:
@@ -415,6 +428,8 @@ class Dashboard:
             parts.append(f"updated {updated_count}")
         if created_count > 0:
             parts.append(f"created {created_count}")
+        if skipped_count > 0:
+            parts.append(f"skipped {skipped_count}")
         if failed_count > 0:
             parts.append(f"{failed_count} failed")
         logger.info(f"Questions: {', '.join(parts)}")
@@ -921,36 +936,44 @@ class Dashboard:
         return dashboard
 
     @classmethod
-    def push(cls, directory: Path, collection_id: Optional[int] = None, 
-             database_id: Optional[int] = None, debug: bool = False) -> "Dashboard":
+    def push(cls, directory: Path, collection_id: Optional[int] = None,
+             database_id: Optional[int] = None, debug: bool = False,
+             question_filter: Optional[List[str]] = None) -> "Dashboard":
         """
         Push dashboard from local directory to Metabase (create or update).
-        
+
         Automatically detects whether to create or update based on .state.yaml:
         - If .state.yaml exists → update existing dashboard
         - If .state.yaml missing → create new dashboard (requires collection_id & database_id)
-        
+
         When creating a new dashboard, automatically creates a sub-collection named after
         the dashboard within the specified parent collection.
-        
+
         Args:
             directory: Path to dashboard directory (must exist)
             collection_id: Parent collection ID where dashboard collection will be created (required for new dashboards)
             database_id: Database ID for questions (required for new dashboards)
             debug: Enable debug output
-        
+            question_filter: Optional list of question file paths (relative to directory) to push.
+                             When specified, only those questions are updated; all others are skipped.
+                             The dashboard definition is always pushed regardless.
+
         Returns:
             Dashboard instance
-            
+
         Example:
             # Create new dashboard (auto-creates "My Dashboard" collection in parent 123)
-            dashboard = Dashboard.push("my-dashboard/", 
+            dashboard = Dashboard.push("my-dashboard/",
                                       collection_id=123,  # parent collection
                                       database_id=1)
-            
+
             # Update existing dashboard
             dashboard = Dashboard.push("my-dashboard/")
-        
+
+            # Update only specific questions
+            dashboard = Dashboard.push("my-dashboard/",
+                                      question_filter=["01-tab/my-question.yaml"])
+
         Raises:
             ValueError: If directory doesn't exist or collection_id/database_id missing for new dashboard
             FileNotFoundError: If dashboard.yaml not found in directory
@@ -1073,8 +1096,11 @@ class Dashboard:
                     question_state = dashboard._create_questions_with_state(actual_collection_id, database_id, debug)
                 else:
                     # Update mode: update existing, create new
-                    logger.info(f"Syncing {len(question_files)} questions ({len(existing_questions)} existing)")
-                    question_state = dashboard._update_questions_with_state(existing_questions, database_id, debug)
+                    if question_filter:
+                        logger.info(f"Syncing {len(question_filter)} filtered question(s) (of {len(question_files)} total)")
+                    else:
+                        logger.info(f"Syncing {len(question_files)} questions ({len(existing_questions)} existing)")
+                    question_state = dashboard._update_questions_with_state(existing_questions, database_id, debug, question_filter=question_filter)
                 
                 # Update state with question info and sync timestamp
                 sync_timestamp = datetime.utcnow().isoformat() + "Z"
