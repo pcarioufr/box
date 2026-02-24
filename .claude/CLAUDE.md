@@ -262,6 +262,20 @@ For temporary or discovery queries, prefer inline SQL with `--sql` to avoid crea
 
 Use double backslashes (`\\d+`, `\\w+`) for regex in SQL files — both the Snowflake CLI and Metabase consume one escape layer, so `\\d` arrives as `\d` at the Snowflake engine.
 
+## Sibling Directories
+
+Code from external GitHub projects is stored in sibling directories under `../Code/`:
+
+```
+../Code/
+  acme/             # acme org's internal GitHub repositories
+    acme-analytics  # acme analytics Github repository
+    acme-core       # acme core Github repository
+  beta/             # beta project Github repository 
+```
+
+When referencing or reading source code from other repositories, look in `../Code/`.
+
 ## Directory Structure
 
 - `services/` - Service definitions (containers, workers, servers)
