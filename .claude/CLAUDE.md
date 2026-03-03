@@ -190,7 +190,10 @@ Manage Metabase dashboards using YAML definitions. Dashboards are authored decla
 ```bash
 ./box.sh metabase dashboard pull <id> --dir <dir>           # Pull dashboard + questions to YAML
 ./box.sh metabase dashboard push --dir <dir>                # Push (create or update)
-./box.sh metabase dashboard format                          # Show YAML format help
+./box.sh metabase dashboard push --dir <dir> --question <f> # Push specific question(s) only
+./box.sh metabase dashboard validate --dir <dir>            # Validate YAML/SQL before pushing
+./box.sh metabase dashboard format                          # Show dashboard YAML format help
+./box.sh metabase question format                           # Show question YAML format help
 ```
 
 ### Workflow

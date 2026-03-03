@@ -31,6 +31,17 @@ colors:
       enum7: "#ff7c43"
       enum8: "#ffa600"
     
+    # Pale categorical palette - same hues as enum but pastel/washed out
+    pale_enum:
+      pale_enum1: "#7faec0"
+      pale_enum2: "#8e9fbe"
+      pale_enum3: "#b0a8c8"
+      pale_enum4: "#cfa8ca"
+      pale_enum5: "#e9a8c3"
+      pale_enum6: "#fcaeb4"
+      pale_enum7: "#ffbda1"
+      pale_enum8: "#ffd280"
+
     # Diverging scale palette - for continuous values with a midpoint
     scale:
       scale1: "#00876c"
@@ -70,12 +81,12 @@ colors:
     
     # Orange shades - light to dark
     orange-shades:
-      orange1: "#c16700"  # darkest
-      orange2: "#d07e33"
-      orange3: "#de9456"
-      orange4: "#ebac79"
-      orange5: "#f6c39d"
-      orange6: "#ffdbc1"  # lightest
+      orange1: "#dd710c"  # darkest
+      orange2: "#e78639"
+      orange3: "#ef9c5c"
+      orange4: "#f6b17d"
+      orange5: "#fcc69f"
+      orange6: "#ffdbc2"  # lightest
     
     # Red shades - light to dark
     red-shades:
@@ -88,21 +99,21 @@ colors:
     
     # Yellow shades - light to dark
     yellow-shades:
-      yellow1: "#c1a701"  # darkest
-      yellow2: "#ccb23b"
-      yellow3: "#d6be5e"
-      yellow4: "#dfca7e"
-      yellow5: "#e8d69d"
-      yellow6: "#efe2bc"  # lightest
+      yellow1: "#d8b800"  # darkest
+      yellow2: "#dfc03e"
+      yellow3: "#e5c861"
+      yellow4: "#ead080"
+      yellow5: "#eed89e"
+      yellow6: "#f0e1bc"  # lightest
     
     # Pink shades - light to dark
     pink-shades:
-      pink1: "#c104bb"  # darkest
-      pink2: "#cf4bc7"
-      pink3: "#dc73d3"
-      pink4: "#e796df"
-      pink5: "#f2b7ea"
-      pink6: "#fbd8f6"  # lightest
+      pink1: "#c12f9c"  # darkest
+      pink2: "#cf58ad"
+      pink3: "#dc7abe"
+      pink4: "#e999cf"
+      pink5: "#f4b8e0"
+      pink6: "#ffd7f1"  # lightest
     
     # Grey shades - light to dark
     grey-shades:

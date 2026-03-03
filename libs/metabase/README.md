@@ -82,46 +82,31 @@ my-dashboard/
 
 ### Default Output Structure
 
-When using `dashboard get` (always downloads questions):
+When using `dashboard pull` (always downloads questions):
 
 ```
-knowledge/questions/
-├── 75122-onboarding-signups/                # Dashboard folder
-│   ├── 75122-onboarding-signups.yaml        # Dashboard definition
-│   ├── 01-overview/                          # Tab 1: Overview
-│   │   ├── 124411-weekly-signups.yaml
-│   │   ├── 124411-weekly-signups-query.sql
-│   │   ├── 101647-signup-funnel.yaml
-│   │   └── 101647-signup-funnel-query.sql
-│   ├── 02-intake/                            # Tab 2: Intake
-│   │   ├── 132314-product-table.yaml
-│   │   └── 132314-product-table-query.sql
-│   └── 03-conversion/                        # Tab 3: Conversion
-│       ├── 95919-user-activity.yaml
-│       └── 95919-user-activity-query.sql
-└── 89021-product-metrics/
-    ├── 89021-product-metrics.yaml
-    └── 01-metrics/
-        ├── 132539-signups-over-time.yaml
-        └── 132539-signups-over-time-query.sql
+my-dashboard/
+├── dashboard.yaml                           # Dashboard definition
+├── .state.yaml                              # State file tracking Metabase IDs
+├── 01-overview/                             # Tab 1: Overview
+│   ├── 124411-weekly-signups.yaml
+│   ├── 124411-weekly-signups-query.sql
+│   ├── 101647-signup-funnel.yaml
+│   └── 101647-signup-funnel-query.sql
+├── 02-intake/                               # Tab 2: Intake
+│   ├── 132314-product-table.yaml
+│   └── 132314-product-table-query.sql
+└── 03-conversion/                           # Tab 3: Conversion
+    ├── 95919-user-activity.yaml
+    └── 95919-user-activity-query.sql
 ```
 
-**Note**: 
-- Each dashboard is downloaded into its own folder: `{id}-{slug}/`
-- The dashboard YAML is saved at the root of this folder
+**Note**:
+- The dashboard YAML is saved as `dashboard.yaml` at the root
+- A `.state.yaml` file tracks Metabase IDs (Terraform-like workflow)
 - Questions are organized into flat tab subfolders: `01-{tab-name}/`, `02-{tab-name}/`, etc.
 - Each question consists of a `.yaml` file and a `-query.sql` file with matching names
 - SQL queries are stored in separate `.sql` files alongside the YAML
-
-When using `card get` (standalone):
-
-```
-knowledge/questions/
-├── 124411-weekly-signups.yaml
-├── 124411-weekly-signups-query.sql
-├── 101647-signup-funnel.yaml
-└── 101647-signup-funnel-query.sql
-```
 
 ### Debug Mode
 
@@ -148,7 +133,7 @@ knowledge/questions/
 When using `get` commands, if a directory or file with the same ID already exists in the output directory, you will be prompted to confirm before overwriting:
 
 ```bash
-./run.sh metabase dashboard get 75122
+./box.sh metabase dashboard get 75122
 # ⚠️  Warning: Found existing directory with ID 75122:
 #     - 75122-old-name/ (will be replaced with 75122-new-name/)
 # Overwrite? [y/N]:
@@ -163,7 +148,7 @@ If you confirm, the old directory/file will be deleted and replaced with the new
 The `--debug` flag is available as a global option for all commands:
 
 ```bash
-./run.sh metabase --debug dashboard <pull|push> [args...]
+./box.sh metabase --debug dashboard <pull|push> [args...]
 ```
 
 When enabled, `--debug`:
@@ -176,10 +161,10 @@ When enabled, `--debug`:
 
 ```bash
 # Debug a dashboard pull operation
-./run.sh metabase --debug dashboard pull 75122 --dir my-dashboard/
+./box.sh metabase --debug dashboard pull 75122 --dir my-dashboard/
 
 # Debug a dashboard push operation
-./run.sh metabase --debug dashboard push --dir my-dashboard/ --parent 20138 --database 43
+./box.sh metabase --debug dashboard push --dir my-dashboard/ --parent 20138 --database 43
 ```
 
 **Note:** The `--debug` flag can also be passed at the command level (after the subcommand) for backward compatibility, but the global syntax is preferred.
@@ -189,7 +174,7 @@ When enabled, `--debug`:
 Download a dashboard from Metabase to a local directory (automatically includes all questions):
 
 ```bash
-./run.sh metabase dashboard pull <dashboard_id> --dir <directory> [options]
+./box.sh metabase dashboard pull <dashboard_id> --dir <directory> [options]
 ```
 
 **Options:**
@@ -202,10 +187,10 @@ Download a dashboard from Metabase to a local directory (automatically includes 
 
 ```bash
 # Pull a dashboard to a specific directory
-./run.sh metabase dashboard pull 75122 --dir my-dashboard/
+./box.sh metabase dashboard pull 75122 --dir my-dashboard/
 
 # Pull with debug JSON files
-./run.sh metabase dashboard pull 75122 --dir my-dashboard/ --debug
+./box.sh metabase dashboard pull 75122 --dir my-dashboard/ --debug
 ```
 
 **What it does:**
@@ -248,7 +233,7 @@ parameter_mappings:
 Check dashboard YAML/SQL files for common issues before pushing:
 
 ```bash
-./run.sh metabase dashboard validate --dir <directory>
+./box.sh metabase dashboard validate --dir <directory>
 ```
 
 **What it checks:**
@@ -264,11 +249,11 @@ Check dashboard YAML/SQL files for common issues before pushing:
 
 ```bash
 # Validate before pushing
-./run.sh metabase dashboard validate --dir my-dashboard/
+./box.sh metabase dashboard validate --dir my-dashboard/
 # ✅ All checks passed
 
 # Fix issues, then push
-./run.sh metabase dashboard push --dir my-dashboard/
+./box.sh metabase dashboard push --dir my-dashboard/
 ```
 
 ### Push Dashboard
@@ -276,7 +261,7 @@ Check dashboard YAML/SQL files for common issues before pushing:
 Create or update a dashboard in Metabase from a local directory (automatically handles questions and collections):
 
 ```bash
-./run.sh metabase dashboard push --dir <directory> [options]
+./box.sh metabase dashboard push --dir <directory> [options]
 ```
 
 **Required:**
@@ -284,24 +269,28 @@ Create or update a dashboard in Metabase from a local directory (automatically h
 
 **Options (for new dashboards):**
 - `--parent <id>` - Parent collection ID where dashboard will be created (defaults to `METABASE_COLLECTION_ID` from .env, required for new dashboards)
-- `--database <id>` - Database ID for questions (required for new dashboards)
+- `--database <id>` - Database ID for questions (defaults to `METABASE_DATABASE_ID` from .env, required for new dashboards)
+- `--question <FILE>` - Only push this question file (relative to `--dir`). Can be repeated to push multiple. Dashboard definition is always pushed.
 - `--debug` - Enable debug output
 - `--help` - Show help message
 
 **Examples:**
 
 ```bash
-# Create a new dashboard (uses METABASE_COLLECTION_ID from .env as default parent)
-./run.sh metabase dashboard push --dir my-dashboard/ --database 43
+# Create a new dashboard (uses METABASE_COLLECTION_ID and METABASE_DATABASE_ID from .env)
+./box.sh metabase dashboard push --dir my-dashboard/
 
-# Create a new dashboard with explicit parent collection
-./run.sh metabase dashboard push --dir my-dashboard/ --parent 20138 --database 43
+# Create a new dashboard with explicit parent collection and database
+./box.sh metabase dashboard push --dir my-dashboard/ --parent 20138 --database 43
 
 # Update an existing dashboard (uses IDs from .state.yaml)
-./run.sh metabase dashboard push --dir my-dashboard/
+./box.sh metabase dashboard push --dir my-dashboard/
+
+# Update only specific questions (dashboard definition is always pushed)
+./box.sh metabase dashboard push --dir my-dashboard/ --question 01-overview/my-question.yaml
 
 # Push with debug mode
-./run.sh metabase dashboard push --dir my-dashboard/ --parent 20138 --database 43 --debug
+./box.sh metabase dashboard push --dir my-dashboard/ --parent 20138 --database 43 --debug
 ```
 
 **What it does:**
@@ -338,6 +327,24 @@ Create or update a dashboard in Metabase from a local directory (automatically h
 - Files remain unchanged after creation (no IDs embedded, no renaming)
 - Same dashboard YAML can be deployed to dev/staging/prod with different `--parent` and `--database` flags
 
+
+### Dashboard Format
+
+Show dashboard YAML format help and examples:
+
+```bash
+./box.sh metabase dashboard format
+```
+
+### Question Format
+
+Show question/card YAML format help and examples:
+
+```bash
+./box.sh metabase question format
+```
+
+Covers common display types (table, bar, line, pie, row, area, scalar, funnel), SQL file references, parameter definitions, and visualization settings.
 
 ## File Format
 
@@ -421,9 +428,9 @@ METABASE_DATABASE_ID=43
 
 # Parent Collection ID (where to create new dashboards)
 # This will be used as the default --parent value if not specified in the CLI
-# Example: ./run.sh metabase dashboard push --dir <dir> --database <db>
+# Example: ./box.sh metabase dashboard push --dir <dir> --database <db>
 #   (will use METABASE_COLLECTION_ID as default parent)
-# Or explicitly: ./run.sh metabase dashboard push --dir <dir> --parent <id> --database <db>
+# Or explicitly: ./box.sh metabase dashboard push --dir <dir> --parent <id> --database <db>
 METABASE_COLLECTION_ID=20103
 
 # API key for authentication (required)
@@ -444,7 +451,7 @@ METABASE_API_KEY=your-metabase-api-key-here
 
 ```bash
 # Pull dashboard and all its questions to a local directory
-./run.sh metabase dashboard pull 75122 --dir my-dashboard/
+./box.sh metabase dashboard pull 75122 --dir my-dashboard/
 
 # Review the YAML files
 ls my-dashboard/
@@ -459,13 +466,13 @@ ls my-dashboard/
 
 ```bash
 # 1. Pull the source dashboard
-./run.sh metabase dashboard pull 75122 --dir my-dashboard/
+./box.sh metabase dashboard pull 75122 --dir my-dashboard/
 
 # 2. Remove .state.yaml to create a new dashboard
 rm my-dashboard/.state.yaml
 
 # 3. Push to create new dashboard (generates new .state.yaml, files unchanged)
-./run.sh metabase dashboard push --dir my-dashboard/ --parent 20138 --database 43
+./box.sh metabase dashboard push --dir my-dashboard/ --parent 20138 --database 43
 
 # The new dashboard and all its questions are now created with new IDs
 ```
@@ -474,27 +481,27 @@ rm my-dashboard/.state.yaml
 
 ```bash
 # 1. Pull dashboard
-./run.sh metabase dashboard pull 89021 --dir my-dashboard/
+./box.sh metabase dashboard pull 89021 --dir my-dashboard/
 
 # 2. Edit the YAML files (add/remove cards, change positions, update queries, etc.)
 # Edit: my-dashboard/dashboard.yaml
 # Edit: my-dashboard/01-overview/124411-weekly-signups-query.sql
 
 # 3. Push changes (uses IDs from .state.yaml to update existing dashboard)
-./run.sh metabase dashboard push --dir my-dashboard/
+./box.sh metabase dashboard push --dir my-dashboard/
 ```
 
 ### Deploy Dashboard to Different Environment
 
 ```bash
 # 1. Pull from production
-./run.sh metabase dashboard pull 75122 --dir my-dashboard/
+./box.sh metabase dashboard pull 75122 --dir my-dashboard/
 
 # 2. Remove .state.yaml
 rm my-dashboard/.state.yaml
 
 # 3. Deploy to staging with different collection and database
-./run.sh metabase dashboard push --dir my-dashboard/ --parent 99999 --database 55
+./box.sh metabase dashboard push --dir my-dashboard/ --parent 99999 --database 55
 ```
 
 ## Version Control
@@ -532,14 +539,14 @@ This simplified approach makes the workflow easier for both humans and agents.
 
 ```bash
 # Pull dashboard
-./run.sh metabase dashboard pull 89021 --dir my-dashboard/
+./box.sh metabase dashboard pull 89021 --dir my-dashboard/
 # Creates .state.yaml with dashboard ID and question mappings
 
 # Edit files as needed
 # ...
 
 # Push changes (detects existing .state.yaml and updates)
-./run.sh metabase dashboard push --dir my-dashboard/
+./box.sh metabase dashboard push --dir my-dashboard/
 ```
 
 The `.state.yaml` file tracks which dashboard and questions in Metabase correspond to your local files.
@@ -582,15 +589,15 @@ questions:
 
 ```bash
 # Pull from prod
-./run.sh metabase dashboard pull 75122 --dir my-dashboard/
+./box.sh metabase dashboard pull 75122 --dir my-dashboard/
 
 # Deploy to staging
 rm my-dashboard/.state.yaml
-./run.sh metabase dashboard push --dir my-dashboard/ --parent 111 --database 22
+./box.sh metabase dashboard push --dir my-dashboard/ --parent 111 --database 22
 
 # Deploy to prod (different IDs)
 rm my-dashboard/.state.yaml  
-./run.sh metabase dashboard push --dir my-dashboard/ --parent 222 --database 33
+./box.sh metabase dashboard push --dir my-dashboard/ --parent 222 --database 33
 ```
 
 Each deployment gets its own `.state.yaml` with environment-specific IDs.
@@ -648,6 +655,9 @@ When pulling dashboards (which automatically downloads questions), some question
 - Pull dashboards from Metabase as YAML (automatically includes all questions)
 - Push dashboards to Metabase (automatically handles question creation/updates)
 - Terraform-like state management (`.state.yaml` tracks Metabase IDs)
+- Smart create vs. update based on `.state.yaml`
+- Selective question push (`--question` filter)
+- Pre-push validation (`dashboard validate`)
 - Overwrite protection for pull commands
 - SQL file separation for questions
 - Tab-based organization for questions
@@ -655,10 +665,10 @@ When pulling dashboards (which automatically downloads questions), some question
 - Parameter name comments in YAML output (for readability)
 - Dashboard parameters and parameter mappings (template variables)
 - Debug mode with raw JSON output
+- Format help commands (`dashboard format`, `question format`)
 
 ### 🚧 In Progress
 
-- Enhanced push operation (smart create vs. update based on `.state.yaml`)
 - Additional dashboard properties (as discovered)
 - Enhanced error messages
 
