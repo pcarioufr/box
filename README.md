@@ -37,6 +37,11 @@ cp env.example .env   # Add your credentials (Atlassian, Datadog, Snowflake)
 - **Python 3.11+**: `brew install python@3.11`
 - **Docker**: `brew install docker-desktop`
 - **Node.js** (for MCP servers): `brew install node`
+- **agent-browser**: Browser automation for accessing web pages
+  ```bash
+  brew install agent-browser # From https://github.com/vercel-labs/agent-browser
+  npx skills add vercel-labs/agent-browser      # Install the Claude skill (run from ~ to install globally)
+  ```
 
 > This toolbox has been tested on macOS environments.
 
