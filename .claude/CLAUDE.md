@@ -233,6 +233,16 @@ Statistical analysis for CSV data: A/B test comparison and exploratory analysis 
 
 **See `./box.sh analysis --help` for input formats and examples, or `libs/analysis/README.md` for complete documentation.**
 
+## Browser Automation
+
+Use `agent-browser` for web automation. Run `agent-browser --help` for all commands.
+
+Core workflow:
+1. `agent-browser open <url>` - Navigate to page
+2. `agent-browser snapshot -i` - Get interactive elements with refs (@e1, @e2)
+3. `agent-browser click @e1` / `fill @e2 "text"` - Interact using refs
+4. Re-snapshot after page changes
+
 ## Working Folders
 
 Most work happens in **long-lived project directories** under `data/` (e.g., `data/monitorless-detection/`). Use the existing project folder when continuing work on an ongoing effort.
