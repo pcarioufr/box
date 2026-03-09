@@ -1,21 +1,19 @@
 """Confluence REST API client for direct page/blogpost fetching.
 
-This module bypasses MCP and uses the Confluence REST API v2 directly,
-enabling access to both pages and blog posts with proper authentication.
+This module uses the Confluence REST API v2 directly, enabling access
+to both pages and blog posts with proper authentication.
 """
 
 import os
 import re
 import base64
 import html
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Tuple
 import requests
 
-from libs.common.config import (
-    extract_confluence_page_id,
-    get_confluence_output_path,
-)
+from libs.common.config import extract_confluence_page_id, slugify
 
 
 def get_credentials() -> Tuple[str, str]:
@@ -97,15 +95,51 @@ def fetch_blogpost(domain: str, blogpost_id: str, body_format: str = "storage") 
     return response.json()
 
 
+def extract_space_key(url: str) -> Optional[str]:
+    """Extract space key from a Confluence URL like /spaces/UO/overview."""
+    match = re.search(r'/spaces/([^/]+)(?:/overview)?$', url)
+    if match:
+        return match.group(1)
+    return None
+
+
+def fetch_space_homepage(domain: str, space_key: str, body_format: str = "storage") -> dict:
+    """Fetch the homepage of a Confluence space."""
+    email, token = get_credentials()
+
+    # Get space info including homepage ID
+    url = f"https://{domain}/wiki/api/v2/spaces"
+    params = {"keys": space_key}
+    response = requests.get(
+        url, params=params,
+        headers=get_auth_header(email, token),
+        timeout=30,
+    )
+    response.raise_for_status()
+    results = response.json().get("results", [])
+    if not results:
+        raise ValueError(f"Space not found: {space_key}")
+
+    homepage_id = results[0].get("homepageId")
+    if not homepage_id:
+        raise ValueError(f"Space {space_key} has no homepage")
+
+    return fetch_page(domain, str(homepage_id), body_format)
+
+
 def fetch_content(url: str, body_format: str = "storage") -> dict:
-    """Fetch any Confluence content (page or blogpost) by URL."""
+    """Fetch any Confluence content (page, blogpost, or space overview) by URL."""
     domain = extract_cloud_domain(url)
     page_id = extract_confluence_page_id(url)
-    content_type = detect_content_type(url)
 
+    # If no page ID, try space overview
     if not page_id:
+        space_key = extract_space_key(url)
+        if space_key:
+            return fetch_space_homepage(domain, space_key, body_format)
         raise ValueError(f"Could not extract page ID from URL: {url}")
 
+    content_type = detect_content_type(url)
     if content_type == "blogpost":
         return fetch_blogpost(domain, page_id, body_format)
     else:
@@ -193,22 +227,24 @@ def storage_to_markdown(storage_html: str) -> str:
     return text
 
 
-def download_content(url: str, name: str, as_markdown: bool = True) -> Tuple[Path, str]:
-    """Download Confluence content and save to file.
+def pull_content(url: str, output: str = ".", as_markdown: bool = True) -> Path:
+    """Pull Confluence content and save to file with YAML frontmatter.
 
     Args:
         url: Full Confluence URL
-        name: Name for the output file (without .md)
+        output: Output file path (.md) or directory
         as_markdown: If True, convert to markdown; otherwise save raw storage format
 
     Returns:
-        Tuple of (output_path, title)
+        Output path
     """
     # Fetch content
     data = fetch_content(url, body_format="storage")
 
-    # Extract body and title
+    # Extract metadata
     title = data.get("title", "Untitled")
+    page_id = data.get("id", extract_confluence_page_id(url) or "unknown")
+    content_type = detect_content_type(url)
     body_key = "storage" if "storage" in data.get("body", {}) else "view"
     body = data.get("body", {}).get(body_key, {}).get("value", "")
 
@@ -218,14 +254,29 @@ def download_content(url: str, name: str, as_markdown: bool = True) -> Tuple[Pat
     else:
         content = body
 
-    # Add header
-    header = f"<!-- Synced from Confluence: {url} -->\n"
-    header += f"<!-- Title: {title} -->\n\n"
-    header += f"# {title}\n\n"
-    content = header + content
+    # Build YAML frontmatter
+    pulled_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    safe_title = title.replace('"', '\\"')
+    frontmatter = (
+        "---\n"
+        f"confluence_id: \"{page_id}\"\n"
+        f"confluence_url: \"{url}\"\n"
+        f"type: {content_type}\n"
+        f'title: "{safe_title}"\n'
+        f"pulled_at: {pulled_at}\n"
+        "---\n\n"
+    )
 
-    # Save to file
-    output_path = get_confluence_output_path(name)
+    content = frontmatter + f"# {title}\n\n" + content
+
+    # Resolve output path
+    output_path = Path(output)
+    if output_path.is_dir() or output.endswith("/"):
+        output_path.mkdir(parents=True, exist_ok=True)
+        filename = slugify(title) + ".md"
+        output_path = output_path / filename
+    else:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
     output_path.write_text(content, encoding="utf-8")
-
-    return output_path, title
+    return output_path

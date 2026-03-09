@@ -13,8 +13,9 @@ knowledge/*
 
 data/*
 !/data/.gitkeep
-!/data/_sink/.gitkeep
 
 Box.code-workspace
 
 .DS_Store
+
+skills-lock.json

@@ -76,7 +76,7 @@ These knowledge bases ensure consistency across queries and enable rapid answers
 
 When using Claude Code, skills provide the best interface to the underlying libraries:
 
-- `/sync` - Sync external documents (Google Docs, Confluence) to local markdown. Handles URLs or refresh commands.
+- `/sync` - Pull external documents (Google Docs, Confluence) to local markdown.
 - `/pa` - Product Analytics: query user behavior (Datadog RUM), business metrics (Snowflake), and qualitative feedback (Jira). Intelligently routes to the right data source(s) based on your question.
 - `/prd` - Iterate on Product Requirement Documents using Opus model for deep content analysis and refinement.
 
@@ -87,8 +87,8 @@ Skills handle context, output organization, and best practices automatically.
 
 The `libs/` directory contains the underlying CLI tools accessible via `./box.sh`:
 
-- **Google** (`./box.sh google`) - Sync Google Docs to local markdown via browser-based Apps Script
-- **Confluence** (`./box.sh confluence`) - Sync Confluence pages to local markdown, plus markdown cleaning
+- **Google** (`./box.sh google pull`) - Pull Google Docs as local markdown via browser-based Apps Script
+- **Confluence** (`./box.sh confluence pull`) - Pull Confluence pages as local markdown via REST API v2
 - **Jira** (`./box.sh jira`) - Fetch Jira tickets with custom fields and ADF-to-text conversion
 - **Snowflake** (`./box.sh snowflake`) - Execute SQL queries with INCLUDE directives and template variables
 - **Datadog** (`./box.sh datadog`) - Query and aggregate RUM data, fetch session timelines, create/update notebooks for Product Analytics

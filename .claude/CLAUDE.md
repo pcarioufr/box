@@ -4,59 +4,53 @@ This project contains utilities and data exports from Datadog's internal systems
 
 ## Available Skills
 
-- `/sync` - Sync external documents (Google Docs, Confluence) to local markdown. Handles URLs or refresh commands.
+- `/sync` - Pull external documents (Google Docs, Confluence) to local markdown.
 - `/pa` - Product Analytics: query user behavior (Datadog RUM), business metrics (Snowflake), and qualitative feedback (Jira). Intelligently routes to the right data source(s) based on your question.
 - `/prd` - Iterate on Product Requirement Documents using Opus model for deep content analysis and refinement
 - `/todo` - Manage a personal todo list in `data/todo.md`. Add, complete, triage, and clean up tasks.
 - `/box` - Run commands in The Box Docker container
 
-## Document Sync
+## Document Pull
 
-Confluence and Google Docs are managed through a unified sync system via `data/sync.yaml`.
-
-### Sync Modes
-
-| Command | Behavior |
-|---------|----------|
-| `/sync <google-url>` | If URL in config, update that file. Otherwise, add to config + sync. |
-| `/sync <confluence-url>` | If URL in config, update that file. Otherwise, add to config + download. |
-| `/sync refresh` | Sync all entries (Google + Confluence). |
-| `/sync refresh google` | Sync only Google entries. |
-| `/sync refresh confluence` | Sync only Confluence entries. |
-
-### Output Locations
-
-- Google Docs → `data/_google/{slugified-title}.md`
-- Confluence → `data/_confluence/{name}.md`
+Google Docs and Confluence pages are pulled individually to any local path.
 
 ### CLI Commands
 
 ```bash
-# Google Docs
-./box.sh google list                            # List all Google entries
-./box.sh google add <url>                       # Add Google Doc (name from doc title)
-./box.sh google remove <doc-id>                 # Remove by ID (or partial ID)
-./box.sh google refresh                         # Sync all Google entries
+# Google Docs (browser-based via Apps Script)
+./box.sh google pull <id-or-url> -o data/project/          # Pull to directory (auto-slug filename)
+./box.sh google pull <id-or-url> -o data/project/doc.md    # Pull to specific file
+./box.sh google pull <id-or-url>                            # Pull to current directory
 
-# Confluence
-./box.sh confluence list                        # List all Confluence entries
-./box.sh confluence add <url> --name <n>        # Add Confluence page
-./box.sh confluence remove <name>               # Remove by name
-./box.sh confluence download <url> --name <n>   # Download without adding to sync
-./box.sh confluence clean <file> -o <out>       # Clean markdown tags
+# Confluence (REST API)
+./box.sh confluence pull <url> -o data/project/             # Pull to directory (auto-slug filename)
+./box.sh confluence pull <url> -o data/project/page.md      # Pull to specific file
+./box.sh confluence pull <url>                              # Pull to current directory
+./box.sh confluence clean <file> -o <out>                   # Clean markdown tags
 ```
 
-### sync.yaml Format
+### Frontmatter
+
+Both tools embed source identifiers in YAML frontmatter for future push support:
 
 ```yaml
-google:
-  # Google entries only need the doc ID - filename derived from doc title
-  - id: "1abc123..."
-  - id: "1xyz789..."
+# Google Doc
+---
+google_id: 1abc123...
+created: 2026-01-15
+type: gdoc
+source: google-docs
+source_title: "My Document"
+---
 
-confluence:
-  - url: "https://datadoghq.atlassian.net/wiki/spaces/X/pages/123/..."
-    name: "architecture-overview"
+# Confluence
+---
+confluence_id: "123456789"
+confluence_url: "https://datadoghq.atlassian.net/wiki/..."
+type: page
+title: "My Page"
+pulled_at: 2026-03-09T12:00:00Z
+---
 ```
 
 ## Diagrams (Excalidraw)
@@ -299,12 +293,10 @@ When referencing or reading source code from other repositories, look in `../Cod
 - `libs/` - Shared code libraries (Python, etc.)
   - `libs/jira/` - Jira API tools (ticket fetching, ADF conversion)
   - `libs/datadog/` - Datadog API tools (RUM queries)
-  - `libs/sync/` - Document sync management (Google Docs, Confluence, markdown cleaning)
+  - `libs/google/` - Google Docs pull (browser-based Apps Script webhook)
+  - `libs/confluence/` - Confluence pull (REST API v2) and markdown cleaning
   - `libs/metabase/` - Metabase dashboard management (YAML pull/push, state tracking)
 - `data/` - Working folders organized by date (see Working Folders section above)
-  - `data/sync.yaml` - Sync configuration for Google Docs and Confluence
-  - `data/_google/` - Default output for synced Google Docs
-  - `data/_confluence/` - Default output for synced Confluence pages
   - `data/diagrams/` - Excalidraw diagrams (.excalidraw files)
 - `knowledge/` - Curated knowledge bases for skills
   - `knowledge/general.md` - Domain knowledge about the company, business, product area, competition, etc.
