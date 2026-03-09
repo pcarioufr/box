@@ -14,39 +14,37 @@ This repository uses a **unified runner pattern**: All libraries are accessed th
 
 ### Google Library (`google/`)
 
-**Purpose**: Sync Google Docs to local markdown
+**Purpose**: Pull Google Docs as local markdown
 
 ```bash
-./box.sh google list                    # List all Google Doc entries
-./box.sh google add "<url>"             # Add a Google Doc to sync
-./box.sh google remove "<doc-id>"       # Remove by ID (full or partial)
-./box.sh google refresh                 # Sync all via browser
+./box.sh google pull <id-or-url> -o data/project/       # Pull to directory (auto-slug filename)
+./box.sh google pull <id-or-url> -o data/project/doc.md  # Pull to specific file
+./box.sh google pull <id-or-url>                          # Pull to current directory
 ```
 
 **Features**:
-- Browser-based sync via Apps Script webhook
-- Automatic filename from doc title
-- Output: `data/_google/{slugified-title}.md`
+- Browser-based pull via Apps Script webhook with local callback server
+- Accepts doc IDs or full Google Docs URLs
+- YAML frontmatter with `google_id` for future push support
+- Automatic filename from doc title when output is a directory
 
 ---
 
 ### Confluence Library (`confluence/`)
 
-**Purpose**: Sync Confluence pages to local markdown
+**Purpose**: Pull Confluence pages as local markdown
 
 ```bash
-./box.sh confluence list                           # List all entries
-./box.sh confluence add "<url>" --name page-name   # Add a page
-./box.sh confluence remove page-name               # Remove by name
-./box.sh confluence refresh                        # Show entries to sync
-./box.sh confluence download "<url>" --name name   # Download via REST API
-./box.sh confluence clean input.md -o cleaned.md   # Clean markdown
+./box.sh confluence pull "<url>" -o data/project/        # Pull to directory (auto-slug filename)
+./box.sh confluence pull "<url>" -o data/project/page.md  # Pull to specific file
+./box.sh confluence pull "<url>"                           # Pull to current directory
+./box.sh confluence clean input.md -o cleaned.md           # Clean markdown
 ```
 
 **Features**:
-- Direct REST API download for pages AND blog posts
+- REST API v2 for pages, blog posts, and space overviews
+- YAML frontmatter with `confluence_id` for future push support
 - Confluence markdown cleaning (removes custom XML-like tags)
-- Output: `data/_confluence/{name}.md`
 
 ---
 
@@ -276,7 +274,7 @@ libs/analysis/
 
 **Purpose**: Shared utilities used by multiple libraries
 
-- `config.py` - Sync configuration management (`data/sync.yaml`)
+- `config.py` - Shared utilities (URL parsing, slugify)
 
 This is an internal library, not called directly via CLI.
 
@@ -301,15 +299,15 @@ libs/
 ├── __init__.py
 ├── README.md              # This file
 ├── common/                # Shared utilities
-│   └── config.py          # sync.yaml management
-├── google/                # Google Docs sync
+│   └── config.py          # URL parsing, slugify
+├── google/                # Google Docs pull
 │   ├── __main__.py        # CLI entry point
-│   ├── sync-gdocs.gs      # Apps Script for doc conversion
+│   ├── pull-gdocs.gs      # Apps Script for doc conversion
 │   └── webhook-setup.md   # Setup instructions
-├── confluence/            # Confluence sync
+├── confluence/            # Confluence pull
 │   ├── __main__.py        # CLI entry point
-│   ├── api.py             # Direct REST API client
-│   ├── sync.py            # Sync helpers
+│   ├── api.py             # REST API v2 client
+│   ├── sync.py            # URL parsing utilities
 │   └── clean.py           # Markdown cleaner
 ├── jira/                  # Jira ticket fetching
 │   ├── __main__.py        # CLI entry point
