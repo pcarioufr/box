@@ -1,186 +1,180 @@
 #!/usr/bin/env python3
-"""Google CLI - Sync Google Docs to local markdown.
+"""Google CLI - Pull Google Docs as local markdown.
 
-Browser-based sync flow:
-1. CLI opens webhook URL in browser with doc IDs
-2. Browser handles Google auth
-3. Apps Script converts docs and writes to Drive folder
-4. Google Drive app syncs files locally to data/_google/
+Browser-based flow:
+1. CLI starts a local HTTP server on a random port
+2. CLI opens the Apps Script webhook URL in the browser with the doc ID
+   and a callback URL pointing to the local server
+3. Browser handles Google auth (restricted to "Only myself")
+4. Apps Script converts the doc to markdown
+5. Apps Script returns an HTML page with JS that POSTs the markdown
+   content back to the local server
+6. CLI receives the content and saves it to the output path
 """
 
 import argparse
+import json
 import sys
+import threading
 import webbrowser
-from typing import List, Tuple
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from pathlib import Path
+from urllib.parse import quote
 
-from libs.common.config import (
-    load_config,
-    save_config,
-    find_google_entry,
-    add_google_entry,
-    extract_google_doc_id,
-    GOOGLE_OUTPUT_DIR,
-)
+from libs.common.config import extract_google_doc_id
 
 
-# Webhook URL for the deployed Apps Script
-WEBHOOK_URL = "https://script.google.com/a/macros/datadoghq.com/s/AKfycbwXgybo482_Jafzas8SUDGlyndeSi0k5g7DrG0ZEoK9XYruKdyICzIfK9TOsLIggYkDnA/exec"
+# Apps Script Web App URL
+PULL_URL = "https://script.google.com/a/macros/datadoghq.com/s/AKfycbxmAR6xY4t-_lfTTbTdoorihl-AgRGJPp5LyR3rCkfVQbaA1W0EPQPyEEx7D-zcs9nI6Q/exec"
+
+# How long to wait for the callback (seconds)
+CALLBACK_TIMEOUT = 120
 
 
-def list_entries() -> list:
-    """List all Google entries from sync config."""
-    config = load_config()
-    return config.get("google", [])
+class CallbackHandler(BaseHTTPRequestHandler):
+    """HTTP handler that receives markdown content from the browser."""
+
+    def do_POST(self):
+        length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(length).decode("utf-8")
+
+        try:
+            data = json.loads(body)
+            self.server.result = data
+        except json.JSONDecodeError:
+            self.server.result = {"error": "Invalid JSON received"}
+
+        # Respond with a simple page so the browser tab shows completion
+        response = (
+            '<!DOCTYPE html><html><head><meta charset="utf-8">'
+            "<title>Done</title>"
+            '<style>body{font-family:system-ui,sans-serif;max-width:600px;'
+            "margin:80px auto;text-align:center;color:#333}"
+            "h1{color:#22863a}</style></head>"
+            "<body><h1>Done</h1><p>You can close this tab.</p></body></html>"
+        )
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Content-Length", str(len(response)))
+        self.end_headers()
+        self.wfile.write(response.encode())
+
+    def do_OPTIONS(self):
+        """Handle CORS preflight."""
+        self.send_response(200)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
+    def log_message(self, format, *args):
+        pass  # Suppress request logs
 
 
-def register_doc(url_or_id: str) -> Tuple[dict, bool]:
-    """Register a Google Doc in sync config."""
-    doc_id = extract_google_doc_id(url_or_id)
-    if not doc_id:
-        raise ValueError(f"Could not extract Google Doc ID from: {url_or_id}")
+def pull_doc(doc_id: str, output: str) -> None:
+    """Pull a Google Doc as markdown to the specified output path."""
+    output_path = Path(output)
 
-    config = load_config()
-    existing = find_google_entry(config, doc_id)
-    is_new = existing is None
+    # Start local server on a random port
+    server = HTTPServer(("127.0.0.1", 0), CallbackHandler)
+    server.result = None
+    port = server.server_address[1]
+    callback_url = f"http://localhost:{port}"
 
-    entry = add_google_entry(config, doc_id)
-    save_config(config)
+    # Run server in background thread
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
 
-    return entry, is_new
-
-
-def open_sync_in_browser(doc_ids: List[str]) -> str:
-    """Open the sync webhook in browser with doc IDs."""
-    url = f"{WEBHOOK_URL}?ids={','.join(doc_ids)}"
+    # Open browser with doc ID and callback URL
+    url = f"{PULL_URL}?id={doc_id}&callback={quote(callback_url)}"
+    print(f"Opening browser to convert doc {doc_id[:20]}...")
     webbrowser.open(url)
-    return url
+
+    # Wait for the callback
+    print("Waiting for response...")
+    server.timeout = CALLBACK_TIMEOUT
+    deadline = __import__("time").time() + CALLBACK_TIMEOUT
+    while server.result is None and __import__("time").time() < deadline:
+        server.handle_request()
+
+    server.shutdown()
+
+    if server.result is None:
+        print(f"\nNo response received within {CALLBACK_TIMEOUT}s.")
+        print("Check browser for errors, then retry.")
+        sys.exit(1)
+
+    result = server.result
+
+    if "error" in result:
+        print(f"\nError from Apps Script: {result['error']}", file=sys.stderr)
+        sys.exit(1)
+
+    content = result.get("content", "")
+    filename = result.get("filename", "document.md")
+
+    if not content:
+        print("Error: Empty content received.", file=sys.stderr)
+        sys.exit(1)
+
+    # Ensure google_id in frontmatter
+    content = ensure_google_id(content, doc_id)
+
+    # Resolve output path
+    if output_path.is_dir() or output.endswith("/"):
+        output_path.mkdir(parents=True, exist_ok=True)
+        output_path = output_path / filename
+    else:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    output_path.write_text(content, encoding="utf-8")
+    print(f"Saved to {output_path}")
 
 
-def sync_all() -> List[Tuple[str, str]]:
-    """Trigger Google sync via browser."""
-    config = load_config()
-    entries = config.get("google", [])
+def ensure_google_id(content: str, doc_id: str) -> str:
+    """Ensure the markdown has google_id in its YAML frontmatter."""
+    if content.startswith("---"):
+        end = content.find("---", 3)
+        if end != -1:
+            frontmatter = content[3:end]
+            if f"google_id: {doc_id}" in frontmatter:
+                return content
+            if "google_id:" not in frontmatter:
+                content = content[:3] + frontmatter.rstrip() + f"\ngoogle_id: {doc_id}\n" + content[end:]
+            return content
 
-    if not entries:
-        return []
-
-    doc_ids = [e.get("id") for e in entries if e.get("id")]
-    if not doc_ids:
-        return []
-
-    open_sync_in_browser(doc_ids)
-    return [(doc_id, "Browser opened") for doc_id in doc_ids]
-
-
-# --- CLI Commands ---
-
-def cmd_list(args):
-    """List all Google Doc entries."""
-    entries = list_entries()
-
-    if not entries:
-        print("No Google Docs configured.")
-        print("\nAdd entries with:")
-        print("  ./box.sh google add <url>")
-        return
-
-    print("Google Docs:")
-    print("-" * 60)
-    for entry in entries:
-        doc_id = entry.get("id", "unknown")
-        print(f"  ID: {doc_id[:40]}...")
-        print(f"      Output: data/_google/{{slug}}.md")
-    print()
-    print(f"Total: {len(entries)} doc(s)")
+    # No frontmatter — add one
+    return f"---\ngoogle_id: {doc_id}\n---\n\n{content}"
 
 
-def cmd_add(args):
-    """Add a Google Doc to sync config."""
-    doc_id = extract_google_doc_id(args.url)
+# --- CLI ---
+
+def cmd_pull(args):
+    """Pull a Google Doc as markdown."""
+    doc_id = extract_google_doc_id(args.doc)
     if not doc_id:
-        print(f"Error: Could not extract Google Doc ID from: {args.url}", file=sys.stderr)
+        print(f"Error: Could not extract Google Doc ID from: {args.doc}", file=sys.stderr)
         sys.exit(1)
 
-    entry, is_new = register_doc(args.url)
-
-    action = "Added" if is_new else "Already exists"
-    print(f"{action}: {entry['id'][:40]}...")
-    print(f"  Output: data/_google/{{slug-from-doc-title}}.md")
-
-
-def cmd_remove(args):
-    """Remove a Google Doc from sync config."""
-    config = load_config()
-    entries = config.get("google", [])
-
-    # Match by ID (can be full ID or partial)
-    matching = [e for e in entries if args.identifier in e.get("id", "")]
-
-    if not matching:
-        print(f"Error: No entry found with ID containing: {args.identifier}", file=sys.stderr)
-        sys.exit(1)
-
-    for entry in matching:
-        entries.remove(entry)
-        print(f"Removed: {entry['id'][:40]}...")
-
-    config["google"] = entries
-    save_config(config)
-
-
-def cmd_refresh(args):
-    """Sync all Google Docs via browser."""
-    entries = list_entries()
-
-    if not entries:
-        print("No Google Docs to sync.")
-        print("Add entries with: ./box.sh google add <url>")
-        return
-
-    print(f"Opening browser to sync {len(entries)} Google Doc(s)...")
-    print()
-
-    results = sync_all()
-
-    print("Doc IDs being synced:")
-    for doc_id, status in results:
-        print(f"  - {doc_id[:40]}...")
-
-    print()
-    print("Next steps:")
-    print("  1. Check browser window for sync status")
-    print("  2. Wait for Google Drive to sync files locally")
-    print("  3. Files will appear in data/_google/ once Drive syncs")
+    pull_doc(doc_id, args.output)
 
 
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
-        prog='google',
-        description='Google CLI - Sync Google Docs to local markdown',
+        prog="google",
+        description="Google CLI - Pull Google Docs as local markdown",
     )
 
-    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
-    # List command
-    list_parser = subparsers.add_parser('list', help='List all Google Doc entries')
-    list_parser.set_defaults(func=cmd_list)
+    # Pull command
+    pull_parser = subparsers.add_parser("pull", help="Pull a Google Doc as markdown")
+    pull_parser.add_argument("doc", help="Google Doc URL or ID")
+    pull_parser.add_argument("-o", "--output", default=".", help="Output file path (.md) or directory (default: current dir)")
+    pull_parser.set_defaults(func=cmd_pull)
 
-    # Add command
-    add_parser = subparsers.add_parser('add', help='Add a Google Doc to sync')
-    add_parser.add_argument('url', help='Google Doc URL or ID')
-    add_parser.set_defaults(func=cmd_add)
-
-    # Remove command
-    remove_parser = subparsers.add_parser('remove', help='Remove a Google Doc from sync')
-    remove_parser.add_argument('identifier', help='Doc ID (full or partial)')
-    remove_parser.set_defaults(func=cmd_remove)
-
-    # Refresh command
-    refresh_parser = subparsers.add_parser('refresh', help='Sync all Google Docs via browser')
-    refresh_parser.set_defaults(func=cmd_refresh)
-
-    # Parse and execute
     args = parser.parse_args()
 
     if not args.command:
@@ -197,5 +191,5 @@ def main():
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
