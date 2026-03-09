@@ -4,16 +4,14 @@ ENV TZ=Europe/Paris
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TERM=xterm-256color
 
-RUN apt update
-RUN apt upgrade -y -qq
-
-# Installed packages 
-RUN apt install -y -qq \
+# Installed packages
+RUN apt update && apt upgrade -y -qq && apt install -y -qq \
     sudo \
     curl wget \
     unzip \
     lsb-release \
-    jq bc
+    jq bc \
+    openssh-client
 
 
 # Create box user
