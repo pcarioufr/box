@@ -1,23 +1,29 @@
 /**
  * =================================================================
- * GOOGLE DOCS TO MARKDOWN CONVERTER (v2.1)
+ * GOOGLE DOCS TO MARKDOWN CONVERTER (v4.0)
  * =================================================================
  *
  * USAGE:
- * Deploy as Web App and call with specific doc IDs:
- *   GET https://YOUR_URL/exec?ids=docId1,docId2
+ * Deploy as Web App ("Only myself") and call with a single doc ID:
+ *   GET https://YOUR_URL/exec?id=docId&callback=http://localhost:PORT
  *
- * OUTPUT:
- * Markdown files are written to OUTPUT_FOLDER_ID in Google Drive.
- * Use Google Drive app to sync files locally.
+ * FLOW:
+ * 1. CLI starts a local HTTP server and opens this URL in the browser
+ * 2. Browser authenticates with Google (restricted to "Only myself")
+ * 3. This script converts the doc to markdown
+ * 4. Returns an HTML page with JS that POSTs the content to the callback URL
+ * 5. CLI receives the content and saves it locally
  *
  * FEATURES:
- * - Converts Google Docs to Markdown with YAML frontmatter
- * - Writes files to Drive folder with slugified filenames
+ * - Converts Google Docs to Markdown with YAML frontmatter (includes google_id)
+ * - Browser-based auth (no token needed, restricted to "Only myself")
+ * - Callback to local CLI server (no file download needed)
  * - Includes threaded comments as appendix
  * - Strips base64 images by default
  *
  * VERSION HISTORY:
+ * v3.1 - @pierre.cariou - 08-MAR-2026 - Callback to local server (no download/Drive)
+ * v3.0 - @pierre.cariou - 08-MAR-2026 - Direct download (no Drive folder dependency)
  * v2.1 - @pierre.cariou - 05-FEB-2026 - Write to Drive folder (auth-friendly)
  * v2.0 - @pierre.cariou - 05-FEB-2026 - On-demand conversion via webhook
  */
@@ -26,10 +32,6 @@
 // CONFIGURATION
 // -----------------------------------------------------------------
 var CONFIG = {
-  // Google Drive folder ID where markdown files will be saved
-  // Get this from the folder URL: https://drive.google.com/drive/folders/FOLDER_ID
-  OUTPUT_FOLDER_ID: '1ejAFfdSzGZ2aekKnC3W6kVEWAemAUuNl',
-
   // Set to TRUE to strip all base64 images from output
   REMOVE_IMAGES: true,
 
@@ -44,53 +46,35 @@ var CONFIG = {
 
 /**
  * Webhook endpoint for GET requests.
- * Usage: GET https://YOUR_URL/exec?ids=id1,id2,id3
+ * Usage: GET https://YOUR_URL/exec?id=docId
  */
 function doGet(e) {
   return handleWebhookRequest(e);
 }
 
 /**
- * Webhook endpoint for POST requests.
- */
-function doPost(e) {
-  return handleWebhookRequest(e);
-}
-
-/**
- * Handles webhook requests.
- * Converts docs and writes to Drive folder, returns HTML status page.
+ * Handles webhook request.
+ * Converts a single doc to markdown and POSTs it to the callback URL.
  */
 function handleWebhookRequest(e) {
-  // Check config
-  if (!CONFIG.OUTPUT_FOLDER_ID) {
-    return htmlResponse("Error", "OUTPUT_FOLDER_ID not configured in script.");
-  }
+  var docId = e.parameter.id || '';
+  var callbackUrl = e.parameter.callback || '';
 
-  // Require ids parameter
-  var idsParam = e.parameter.ids || '';
-  if (!idsParam) {
-    return htmlResponse("Error", "Missing required parameter: ids (comma-separated doc IDs)");
+  if (!docId) {
+    return htmlResponse("Error", "Missing required parameter: id");
+  }
+  if (!callbackUrl) {
+    return htmlResponse("Error", "Missing required parameter: callback");
   }
 
   try {
-    var docIds = idsParam.split(',')
-      .map(function(id) { return id.trim(); })
-      .filter(function(id) { return id !== ''; });
-
-    if (docIds.length === 0) {
-      return htmlResponse("Error", "No valid doc IDs provided");
+    var result = convertDoc(docId);
+    if (result.error) {
+      return htmlResponse("Error", result.error);
     }
 
-    var folder = DriveApp.getFolderById(CONFIG.OUTPUT_FOLDER_ID);
-    var results = [];
-
-    for (var i = 0; i < docIds.length; i++) {
-      var result = convertAndSaveDoc(docIds[i], folder);
-      results.push(result);
-    }
-
-    return htmlResponse("Sync Complete", formatResults(results));
+    // Return HTML page that POSTs content to the local CLI server
+    return callbackResponse(callbackUrl, result.slug + '.md', result.content);
 
   } catch (err) {
     Logger.log("Error: " + err.toString());
@@ -99,34 +83,59 @@ function handleWebhookRequest(e) {
 }
 
 /**
- * Returns an HTML response page.
+ * Returns an HTML error page.
  */
 function htmlResponse(title, body) {
   var html = '<!DOCTYPE html><html><head><meta charset="utf-8">' +
     '<title>' + title + '</title>' +
     '<style>body{font-family:system-ui,sans-serif;max-width:800px;margin:40px auto;padding:20px;line-height:1.6}' +
-    'h1{color:#333}pre{background:#f5f5f5;padding:15px;border-radius:5px;overflow-x:auto}' +
-    '.success{color:#22863a}.error{color:#cb2431}</style></head>' +
-    '<body><h1>' + title + '</h1>' + body + '</body></html>';
+    'h1{color:#333}.error{color:#cb2431}</style></head>' +
+    '<body><h1>' + title + '</h1><p class="error">' + body + '</p></body></html>';
   return HtmlService.createHtmlOutput(html);
 }
 
 /**
- * Formats results as HTML.
+ * Returns an HTML page that POSTs the markdown content to the CLI's local server.
  */
-function formatResults(results) {
-  var html = '<p>Processed ' + results.length + ' document(s):</p><ul>';
-  for (var i = 0; i < results.length; i++) {
-    var r = results[i];
-    if (r.error) {
-      html += '<li class="error">❌ ' + r.id + ': ' + r.error + '</li>';
-    } else {
-      html += '<li class="success">✅ ' + r.slug + '.md (' + r.title + ')</li>';
-    }
-  }
-  html += '</ul><p>Files saved to Drive folder. Google Drive app will sync them locally.</p>';
-  html += '<p><small>Timestamp: ' + new Date().toISOString() + '</small></p>';
-  return html;
+function callbackResponse(callbackUrl, filename, content) {
+  // Encode content as JSON-safe string
+  var payload = JSON.stringify({
+    filename: filename,
+    content: content
+  });
+
+  // Escape for embedding in JS string literal
+  var escapedPayload = payload
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r');
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+    '<title>Sending...</title>' +
+    '<style>body{font-family:system-ui,sans-serif;max-width:600px;' +
+    'margin:80px auto;text-align:center;color:#333}' +
+    '#status{font-size:1.2em}</style></head>' +
+    '<body>' +
+    '<p id="status">Sending to CLI...</p>' +
+    '<script>' +
+    'fetch(\'' + callbackUrl + '\', {' +
+    '  method: "POST",' +
+    '  headers: {"Content-Type": "application/json"},' +
+    '  body: \'' + escapedPayload + '\'' +
+    '}).then(function(r) {' +
+    '  return r.text();' +
+    '}).then(function(html) {' +
+    '  document.open(); document.write(html); document.close();' +
+    '}).catch(function(err) {' +
+    '  document.getElementById("status").innerHTML = ' +
+    '    "Failed to send to CLI: " + err.message + "<br><small>Is the CLI still running?</small>";' +
+    '  document.getElementById("status").style.color = "#cb2431";' +
+    '});' +
+    '</script>' +
+    '</body></html>';
+
+  return HtmlService.createHtmlOutput(html);
 }
 
 
@@ -135,13 +144,12 @@ function formatResults(results) {
 // =================================================================
 
 /**
- * Converts a Google Doc to markdown and saves to folder.
+ * Converts a Google Doc to markdown and returns the content.
  *
  * @param {string} docId - The Google Doc ID
- * @param {Folder} folder - The Drive folder to save to
- * @returns {Object} - {id, title, slug} or {id, error}
+ * @returns {Object} - {id, title, slug, content} or {id, error}
  */
-function convertAndSaveDoc(docId, folder) {
+function convertDoc(docId) {
   try {
     var file = DriveApp.getFileById(docId);
     var title = file.getName();
@@ -174,15 +182,7 @@ function convertAndSaveDoc(docId, folder) {
       mdContent += "\n\n" + comments;
     }
 
-    // Save to Drive folder (overwrite if exists)
-    var filename = slug + '.md';
-    var existingFiles = folder.getFilesByName(filename);
-    while (existingFiles.hasNext()) {
-      existingFiles.next().setTrashed(true);
-    }
-    folder.createFile(filename, mdContent, MimeType.PLAIN_TEXT);
-
-    return { id: docId, title: title, slug: slug };
+    return { id: docId, title: title, slug: slug, content: mdContent };
 
   } catch (e) {
     return { id: docId, error: e.toString() };
@@ -272,10 +272,10 @@ function generateFrontMatter(file) {
   var safeTitle = title.replace(/"/g, '\\"');
 
   return "---\n" +
+    "google_id: " + id + "\n" +
     "created: " + created + "\n" +
     "type: " + type + "\n" +
     "source: " + source + "\n" +
-    "source_id: " + id + "\n" +
     'source_title: "' + safeTitle + '"\n' +
     "---\n\n";
 }

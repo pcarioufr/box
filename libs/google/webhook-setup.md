@@ -2,7 +2,7 @@
 Folder highlights
 Google Apps Script converts docs to markdown via a webhook, last updated by @pierre.cariou on Jan 26, 2026.
 
-# Webhook Setup Guide for docdown.gs
+# Webhook Setup Guide for pull-gdocs.gs
 
 This guide explains how to deploy the Google Docs to Markdown script as a webhook that can be triggered via browser.
 
@@ -56,10 +56,10 @@ If you deployed with wrong settings, go to Deploy → Manage deployments → Edi
 
 ## Step 3: Test the Webhook
 
-Run the sync script, which will open your browser:
+Run the pull command, which will open your browser:
 
 ```bash
-./box.sh google refresh
+./box.sh google pull <doc-id-or-url> -o data/test.md
 ```
 
 Your browser will open and handle authentication automatically:
@@ -81,13 +81,13 @@ Your browser will open and handle authentication automatically:
 
 ## Step 4: Daily Usage
 
-To trigger a sync anytime:
+To pull a Google Doc anytime:
 
 ```bash
-./box.sh google refresh
+./box.sh google pull <doc-id-or-url> -o path/to/output.md
 ```
 
-Your browser will open, handle authentication automatically via your Google session, and show the sync result.
+Your browser will open, handle authentication via your Google session, and the CLI will wait for the file to sync locally via Google Drive.
 
 ---
 
