@@ -36,12 +36,17 @@ class CallbackHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length", 0))
+        print(f"[callback] Received POST ({length} bytes)")
         body = self.rfile.read(length).decode("utf-8")
 
         try:
             data = json.loads(body)
+            fname = data.get("filename", "?")
+            content_len = len(data.get("content", ""))
+            print(f"[callback] Parsed OK: filename={fname}, content={content_len} chars")
             self.server.result = data
         except json.JSONDecodeError:
+            print(f"[callback] ERROR: Invalid JSON")
             self.server.result = {"error": "Invalid JSON received"}
 
         # Respond with a simple page so the browser tab shows completion
@@ -62,6 +67,7 @@ class CallbackHandler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self):
         """Handle CORS preflight."""
+        print("[callback] Received OPTIONS (CORS preflight)")
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
@@ -89,16 +95,24 @@ def pull_doc(doc_id: str, output: str) -> None:
     # Open browser with doc ID and callback URL
     url = f"{PULL_URL}?id={doc_id}&callback={quote(callback_url)}"
     print(f"Opening browser to convert doc {doc_id[:20]}...")
+    print(f"[server] Listening on port {port}, callback={callback_url}")
     webbrowser.open(url)
 
     # Wait for the callback
     print("Waiting for response...")
-    server.timeout = CALLBACK_TIMEOUT
-    deadline = __import__("time").time() + CALLBACK_TIMEOUT
-    while server.result is None and __import__("time").time() < deadline:
-        server.handle_request()
+    import time as _time
+    deadline = _time.time() + CALLBACK_TIMEOUT
+    last_log = 0
+    while server.result is None and _time.time() < deadline:
+        remaining = int(deadline - _time.time())
+        if remaining != last_log and remaining % 10 == 0:
+            print(f"[server] Still waiting... {remaining}s remaining")
+            last_log = remaining
+        _time.sleep(0.5)
 
     server.shutdown()
+    if server.result is not None:
+        print("[server] Got result, shutting down")
 
     if server.result is None:
         print(f"\nNo response received within {CALLBACK_TIMEOUT}s.")
