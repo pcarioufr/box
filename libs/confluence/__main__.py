@@ -7,19 +7,18 @@ Commands:
 """
 
 import argparse
+import re
 import sys
 import os
+from pathlib import Path
 
 from libs.confluence.api import pull_content, detect_content_type
-from libs.confluence.sync import suggest_name_from_url
 
 
 # --- CLI Commands ---
 
 def cmd_pull(args):
     """Pull Confluence content as markdown."""
-    from pathlib import Path
-
     content_type = detect_content_type(args.url)
     print(f"Pulling {content_type}: {args.url}")
 
@@ -34,6 +33,62 @@ def cmd_pull(args):
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
+
+
+def find_confluence_pages(directory: str) -> list[tuple[Path, str]]:
+    """Scan directory recursively for .md files with confluence_url in frontmatter.
+
+    Returns list of (file_path, confluence_url) tuples.
+    """
+    results = []
+    for md_file in Path(directory).rglob("*.md"):
+        try:
+            text = md_file.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        if not text.startswith("---"):
+            continue
+        end = text.find("---", 3)
+        if end == -1:
+            continue
+        frontmatter = text[3:end]
+        match = re.search(r'^confluence_url:\s*"?(.+?)"?\s*$', frontmatter, re.MULTILINE)
+        if match:
+            url = match.group(1).strip()
+            results.append((md_file, url))
+    return results
+
+
+def cmd_pull_all(args):
+    """Re-pull all Confluence pages found in a directory."""
+    directory = args.directory
+    if not Path(directory).is_dir():
+        print(f"Error: {directory} is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    pages = find_confluence_pages(directory)
+    if not pages:
+        print(f"No files with confluence_url frontmatter found in {directory}")
+        return
+
+    print(f"Found {len(pages)} Confluence page(s) to refresh:")
+    for path, url in pages:
+        print(f"  {path}")
+    print()
+
+    succeeded = 0
+    failed = 0
+    for path, url in pages:
+        print(f"Pulling {path.name}...")
+        try:
+            pull_content(url=url, output=str(path), as_markdown=True)
+            print(f"  Saved to {path}")
+            succeeded += 1
+        except Exception as e:
+            failed += 1
+            print(f"  Error: {e}")
+
+    print(f"\nDone: {succeeded} succeeded, {failed} failed")
 
 
 def cmd_clean(args):
@@ -83,6 +138,24 @@ EXAMPLES:
     pull_parser.add_argument('-o', '--output', default='.', help='Output file path (.md) or directory (default: current dir)')
     pull_parser.add_argument('--raw', action='store_true', help='Save raw storage format instead of markdown')
     pull_parser.set_defaults(func=cmd_pull)
+
+    # Pull-all command
+    pull_all_parser = subparsers.add_parser(
+        'pull-all',
+        help='Re-pull all Confluence pages in a directory',
+        description='''Scan a directory recursively for .md files with confluence_url
+in their YAML frontmatter, and re-pull each one from Confluence.
+
+Each file is updated in place.
+
+EXAMPLES:
+  confluence pull-all data/project/
+  confluence pull-all .
+''',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    pull_all_parser.add_argument('directory', help='Directory to scan for Confluence pages')
+    pull_all_parser.set_defaults(func=cmd_pull_all)
 
     # Clean command
     clean_parser = subparsers.add_parser(
