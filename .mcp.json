@@ -25,6 +25,19 @@
     "datadog": {
       "type": "http",
       "url": "https://mcp.datadoghq.com/api/unstable/mcp-server/mcp"
+    },
+    "slack": {
+      "type": "http",
+      "url": "https://mcp.slack.com/mcp",
+      "oauth": {
+        "clientId": "1601185624273.8899143856786",
+        "callbackPort": 3118
+      }
+    },
+    "google": {
+      "type": "http",
+      "url": "https://google-workspace-mcp-server-834963730936.us-central1.run.app/mcp"
     }
+
   }
 }
