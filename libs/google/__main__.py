@@ -162,6 +162,31 @@ def ensure_google_id(content: str, doc_id: str) -> str:
     return f"---\ngoogle_id: {doc_id}\n---\n\n{content}"
 
 
+def find_google_docs(directory: str) -> list[tuple[Path, str]]:
+    """Scan directory recursively for .md files with google_id in frontmatter.
+
+    Returns list of (file_path, google_id) tuples.
+    """
+    import re
+    results = []
+    for md_file in Path(directory).rglob("*.md"):
+        try:
+            text = md_file.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        if not text.startswith("---"):
+            continue
+        end = text.find("---", 3)
+        if end == -1:
+            continue
+        frontmatter = text[3:end]
+        match = re.search(r'^google_id:\s*(.+)$', frontmatter, re.MULTILINE)
+        if match:
+            doc_id = match.group(1).strip().strip('"').strip("'")
+            results.append((md_file, doc_id))
+    return results
+
+
 # --- CLI ---
 
 def cmd_pull(args):
@@ -172,6 +197,41 @@ def cmd_pull(args):
         sys.exit(1)
 
     pull_doc(doc_id, args.output)
+
+
+def cmd_pull_all(args):
+    """Re-pull all Google Docs found in a directory."""
+    directory = args.directory
+    if not Path(directory).is_dir():
+        print(f"Error: {directory} is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    docs = find_google_docs(directory)
+    if not docs:
+        print(f"No files with google_id frontmatter found in {directory}")
+        return
+
+    print(f"Found {len(docs)} Google Doc(s) to refresh:")
+    for path, doc_id in docs:
+        print(f"  {path} ({doc_id[:20]}...)")
+    print()
+
+    succeeded = 0
+    failed = 0
+    for path, doc_id in docs:
+        print(f"Pulling {path.name}...")
+        try:
+            pull_doc(doc_id, str(path))
+            succeeded += 1
+        except SystemExit:
+            failed += 1
+            print(f"  Failed, skipping.")
+        except Exception as e:
+            failed += 1
+            print(f"  Error: {e}")
+        print()
+
+    print(f"Done: {succeeded} succeeded, {failed} failed")
 
 
 def main():
@@ -188,6 +248,25 @@ def main():
     pull_parser.add_argument("doc", help="Google Doc URL or ID")
     pull_parser.add_argument("-o", "--output", default=".", help="Output file path (.md) or directory (default: current dir)")
     pull_parser.set_defaults(func=cmd_pull)
+
+    # Pull-all command
+    pull_all_parser = subparsers.add_parser(
+        "pull-all",
+        help="Re-pull all Google Docs in a directory",
+        description="""Scan a directory recursively for .md files with google_id
+in their YAML frontmatter, and re-pull each one from Google Docs.
+
+Each file is updated in place. Requires browser auth for each doc
+(one browser tab per doc, sequentially).
+
+EXAMPLES:
+  google pull-all data/project/
+  google pull-all .
+""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    pull_all_parser.add_argument("directory", help="Directory to scan for Google Docs")
+    pull_all_parser.set_defaults(func=cmd_pull_all)
 
     args = parser.parse_args()
 
