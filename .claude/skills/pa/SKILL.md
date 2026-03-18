@@ -123,10 +123,10 @@ When the user wants to publish or share their analysis:
 
 ```bash
 # Create a notebook from JSON definition
-./box.sh datadog notebook create data/<working-folder>/datadog/notebook.json
+./box.sh datadog notebook create data/explorations/<working-folder>/datadog/notebook.json
 
 # Update an existing notebook
-./box.sh datadog notebook update data/<working-folder>/datadog/notebook.json
+./box.sh datadog notebook update data/explorations/<working-folder>/datadog/notebook.json
 
 # Detailed help
 ./box.sh datadog notebook --help
@@ -136,10 +136,10 @@ When the user wants to publish or share their analysis:
 
 ## Working Folders
 
-**All work is organized in date-based working folders** under `data/`:
+**All work is organized in date-based working folders** under `data/explorations/`:
 
 ```
-data/YYYY-MM-DD_short-description/
+data/explorations/YYYY-MM-DD_short-description/
 ├── master.md              # Overall findings and context
 ├── datadog/               # RUM query outputs + notebooks
 │   ├── *.json             # RUM query results
@@ -180,17 +180,17 @@ data/YYYY-MM-DD_short-description/
 All CLI commands support `--working-folder` for consistent output organization:
 
 ```bash
-# RUM outputs → data/{folder}/datadog/
+# RUM outputs → data/explorations/{folder}/datadog/
 ./box.sh datadog rum aggregate "..." \
   --working-folder 2026-02-05_dashboard-adoption \
   --output top_orgs.json
 
-# Snowflake outputs → data/{folder}/snowflake/
+# Snowflake outputs → data/explorations/{folder}/snowflake/
 ./box.sh snowflake query analysis.sql \
   --working-folder 2026-02-05_dashboard-adoption \
   --output org_arr.csv
 
-# Jira outputs → data/{folder}/jira/
+# Jira outputs → data/explorations/{folder}/jira/
 ./box.sh jira fetch FRMNTS \
   --working-folder 2026-02-05_dashboard-adoption \
   --output tickets.json
@@ -235,7 +235,7 @@ Parse the user's question to determine:
 
 ### 2. Create/Identify Working Folder
 
-- New task → Create `data/YYYY-MM-DD_description/`
+- New task → Create `data/explorations/YYYY-MM-DD_description/`
 - Follow-up → Continue existing folder
 - Uncertain → Ask the user
 

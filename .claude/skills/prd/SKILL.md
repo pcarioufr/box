@@ -138,7 +138,7 @@ Help create a new document from scratch:
 Product documentation work often involves multiple related files. Use working folders:
 
 ```
-data/YYYY-MM-DD_doc-revision/
+data/explorations/YYYY-MM-DD_doc-revision/
 ├── master.md              # Summary of changes and decisions
 ├── prd/
 │   ├── original.md        # Original version (if major rewrite)
