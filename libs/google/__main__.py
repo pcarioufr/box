@@ -14,6 +14,8 @@ Browser-based flow:
 
 import argparse
 import json
+import os
+import subprocess
 import sys
 import threading
 import webbrowser
@@ -25,7 +27,7 @@ from libs.common.config import extract_google_doc_id
 
 
 # Apps Script Web App URL
-PULL_URL = "https://script.google.com/a/macros/datadoghq.com/s/AKfycbxmAR6xY4t-_lfTTbTdoorihl-AgRGJPp5LyR3rCkfVQbaA1W0EPQPyEEx7D-zcs9nI6Q/exec"
+PULL_URL = os.getenv("GOOGLE_DOCS_SYNC_URL", "")
 
 # How long to wait for the callback (seconds)
 CALLBACK_TIMEOUT = 120
@@ -78,8 +80,51 @@ class CallbackHandler(BaseHTTPRequestHandler):
         pass  # Suppress request logs
 
 
+def _close_browser_tab(doc_id: str) -> None:
+    """Try to close the browser tab via AppleScript (macOS only, silent fail)."""
+    if sys.platform != "darwin":
+        return
+    # Match the tab by the doc ID in the URL (always present unencoded)
+    needle = doc_id
+    for app in ("Google Chrome", "Safari"):
+        if app == "Google Chrome":
+            script = f'''
+            tell application "Google Chrome"
+                repeat with w in windows
+                    set tabList to tabs of w
+                    repeat with i from (count of tabList) to 1 by -1
+                        if URL of item i of tabList contains "{needle}" then
+                            close item i of tabList
+                        end if
+                    end repeat
+                end repeat
+            end tell'''
+        else:
+            script = f'''
+            tell application "Safari"
+                repeat with w in windows
+                    set tabList to tabs of w
+                    repeat with i from (count of tabList) to 1 by -1
+                        if URL of item i of tabList contains "{needle}" then
+                            close item i of tabList
+                        end if
+                    end repeat
+                end repeat
+            end tell'''
+        try:
+            subprocess.run(
+                ["osascript", "-e", script],
+                capture_output=True, timeout=3,
+            )
+        except Exception:
+            pass
+
+
 def pull_doc(doc_id: str, output: str) -> None:
     """Pull a Google Doc as markdown to the specified output path."""
+    if not PULL_URL:
+        print("GOOGLE_DOCS_SYNC_URL is not set. See env.example for setup.")
+        sys.exit(1)
     output_path = Path(output)
 
     # Start local server on a random port
@@ -113,6 +158,7 @@ def pull_doc(doc_id: str, output: str) -> None:
     server.shutdown()
     if server.result is not None:
         print("[server] Got result, shutting down")
+        _close_browser_tab(doc_id)
 
     if server.result is None:
         print(f"\nNo response received within {CALLBACK_TIMEOUT}s.")
