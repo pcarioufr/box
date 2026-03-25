@@ -170,6 +170,81 @@ run_setup() {
 
     deactivate
 
+    # Export environment variables to ~/.zprofile for MCP servers
+    log_section "🔑 Shell Environment Variables"
+
+    ZPROFILE="$HOME/.zprofile"
+
+    if [ -f "$ENV_FILE" ]; then
+        info "Checking environment variables from .env..."
+
+        # Variables that MCP servers need in the shell environment
+        MCP_VARS=(SNOWFLAKE_ACCOUNT SNOWFLAKE_USER SNOWFLAKE_DATABASE SNOWFLAKE_WAREHOUSE)
+
+        VARS_TO_ADD=()
+        VARS_TO_OVERRIDE=()
+
+        for var_name in "${MCP_VARS[@]}"; do
+            # Read value from .env
+            var_value=$(grep -E "^${var_name}=" "$ENV_FILE" 2>/dev/null | head -1 | cut -d'=' -f2-)
+            if [ -z "$var_value" ]; then
+                continue
+            fi
+
+            # Check if already in .zprofile
+            existing=$(grep -E "^export ${var_name}=" "$ZPROFILE" 2>/dev/null | head -1 | sed "s/^export ${var_name}=//" || true)
+            if [ -n "$existing" ] && [ "$existing" != "$var_value" ]; then
+                VARS_TO_OVERRIDE+=("$var_name")
+            elif [ -z "$existing" ]; then
+                VARS_TO_ADD+=("$var_name")
+            else
+                success "  ✅ $var_name (already set)"
+            fi
+        done
+
+        # Handle variables that need overriding
+        for var_name in "${VARS_TO_OVERRIDE[@]}"; do
+            var_value=$(grep -E "^${var_name}=" "$ENV_FILE" | head -1 | cut -d'=' -f2-)
+            existing=$(grep -E "^export ${var_name}=" "$ZPROFILE" | head -1 | sed "s/^export ${var_name}=//")
+            warning "  ⚠️  $var_name already exists in $ZPROFILE"
+            echo "     Current: $existing"
+            echo "     New:     $var_value"
+            read -p "     Override? (y/N) " -n 1 -r
+            echo ""
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                sed -i '' "s|^export ${var_name}=.*|export ${var_name}=${var_value}|" "$ZPROFILE"
+                success "  ✅ $var_name (updated)"
+            else
+                info "  ⏭  $var_name (skipped)"
+            fi
+        done
+
+        # Add new variables
+        if [ ${#VARS_TO_ADD[@]} -gt 0 ]; then
+            # Add a section header if this is the first time
+            if ! grep -q "# Box CLI environment" "$ZPROFILE" 2>/dev/null; then
+                echo "" >> "$ZPROFILE"
+                echo "# Box CLI environment (added by ./box.sh --setup)" >> "$ZPROFILE"
+            fi
+
+            for var_name in "${VARS_TO_ADD[@]}"; do
+                var_value=$(grep -E "^${var_name}=" "$ENV_FILE" | head -1 | cut -d'=' -f2-)
+                echo "export ${var_name}=${var_value}" >> "$ZPROFILE"
+                success "  ✅ $var_name (added to ~/.zprofile)"
+            done
+        fi
+
+        if [ ${#VARS_TO_ADD[@]} -eq 0 ] && [ ${#VARS_TO_OVERRIDE[@]} -eq 0 ]; then
+            success "All MCP environment variables already configured."
+        else
+            echo ""
+            info "Restart your terminal or run: source ~/.zprofile"
+        fi
+    else
+        warning "No .env file found — skipping shell environment setup."
+        info "Run setup again after creating .env to configure shell variables."
+    fi
+
     # Final summary
     log_section "✅ Setup Complete! 🎉"
 
