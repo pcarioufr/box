@@ -3,7 +3,7 @@
 An agentic toolbox for Product Managers, designed to work with Claude Code.
 
 It combines:
-- **Skills** - Natural language interfaces for common PM tasks (analytics, document sync, PRD iteration)
+- **Skills** - Natural language interfaces for common PM tasks (e.g., product analytics)
 - **CLI tools** - Direct access to Datadog, Snowflake, Jira, Confluence, and Google Docs
 - **Knowledge bases** - Curated context that keeps Claude grounded in your domain
 - **Self-maintaining** - The toolbox improves itself as you use it
@@ -37,11 +37,6 @@ cp env.example .env   # Add your credentials (Atlassian, Datadog, Snowflake)
 - **Python 3.11+**: `brew install python@3.11`
 - **Docker**: `brew install docker-desktop`
 - **Node.js** (for MCP servers): `brew install node`
-- **agent-browser**: Browser automation for accessing web pages
-  ```bash
-  brew install agent-browser # From https://github.com/vercel-labs/agent-browser
-  npx skills add vercel-labs/agent-browser      # Install the Claude skill (run from ~ to install globally)
-  ```
 
 > This toolbox has been tested on macOS environments.
 
@@ -74,13 +69,19 @@ These knowledge bases ensure consistency across queries and enable rapid answers
 
 # Claude Skills
 
-When using Claude Code, skills provide the best interface to the underlying libraries:
+When using Claude Code, skills provide higher-level interfaces to the underlying libraries:
 
-- `/sync` - Pull external documents (Google Docs, Confluence) to local markdown.
 - `/pa` - Product Analytics: query user behavior (Datadog RUM), business metrics (Snowflake), and qualitative feedback (Jira). Intelligently routes to the right data source(s) based on your question.
-- `/prd` - Iterate on Product Requirement Documents using Opus model for deep content analysis and refinement.
 
-Skills handle context, output organization, and best practices automatically.
+
+# MCP Servers
+
+Claude Code also has direct API access via MCP servers, configured in `.claude/settings.json`:
+
+- **Datadog** — search/analyze logs, monitors, dashboards, RUM events, incidents, services
+- **Atlassian** — read/write Jira issues and Confluence pages
+- **Slack** — search channels, read/send messages, manage canvases
+- **Snowflake** — run queries, explore schemas, manage objects
 
 
 # Libraries

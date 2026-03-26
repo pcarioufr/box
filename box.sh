@@ -1,5 +1,5 @@
 #!/bin/bash
-# Unified runner for data tools (Jira, Confluence, Snowflake, Ubuntu)
+# Unified runner for data tools (Jira, Confluence, Snowflake)
 # Handles setup, venv activation, and dispatches to CLI
 
 set -e  # Exit on error
@@ -43,7 +43,6 @@ usage() {
     echo "  --setup                  Initialize virtual environment and install dependencies"
     echo ""
     echo "Commands:"
-    echo "  ubuntu [args]            Run commands in Ubuntu container (or open shell)"
     echo "  jira fetch               Fetch Jira tickets using REST API v3"
     echo "  google pull              Pull a Google Doc as local markdown"
     echo "  confluence pull|clean    Pull Confluence pages as local markdown"
@@ -56,14 +55,13 @@ usage() {
     echo "  datadog fetch session    Fetch RUM session timeline as YAML"
     echo "  datadog fetch sessions   Fetch multiple sessions (by session or view query)"
     echo "  datadog fetch view       Fetch raw RUM view attributes as YAML"
-    echo "  draw [open|api|stop]     Diagrams with Excalidraw (YAML push workflow)"
+    echo "  excalidraw [open|api|stop]  Diagrams with Excalidraw (YAML push workflow)"
     echo "  metabase dashboard       Pull/push Metabase dashboards (YAML format)"
     echo "  analysis compare         A/B test comparison with statistical tests"
     echo "  analysis analyze         Exploratory analysis with clustering"
     echo ""
     echo "Quick Start:"
     echo "  ./box.sh --setup                                             # First-time setup"
-    echo "  ./box.sh ubuntu                                              # Open Ubuntu shell"
     echo "  ./box.sh jira fetch FRMNTS --max-results 100 -o tickets.json # Fetch tickets"
     echo "  ./box.sh google pull <id> -o data/doc.md                      # Pull a Google Doc"
     echo "  ./box.sh confluence pull <url> -o data/project/               # Pull Confluence page"
@@ -71,8 +69,8 @@ usage() {
     echo "  ./box.sh snowflake query analysis.sql                        # Execute SQL query"
     echo "  ./box.sh snowflake discover tables monitor                   # Find tables matching 'monitor'"
     echo "  ./box.sh datadog rum query \"@type:view\" --from-time 1h      # Query RUM events"
-    echo "  ./box.sh draw                                                # Start Excalidraw"
-    echo "  ./box.sh draw api push diagram.yaml                          # Push YAML diagram"
+    echo "  ./box.sh excalidraw                                           # Start Excalidraw"
+    echo "  ./box.sh excalidraw api push diagram.yaml                    # Push YAML diagram"
     echo "  ./box.sh metabase dashboard pull 75122 --dir my-dashboard/   # Pull Metabase dashboard"
     echo "  ./box.sh metabase dashboard push --dir my-dashboard/         # Push dashboard changes"
     echo "  ./box.sh analysis compare --entities data.csv --metrics m.yaml  # A/B test comparison"
@@ -295,12 +293,6 @@ fi
 
 # Handle commands
 case "$COMMAND" in
-    ubuntu)
-        # Dispatch to ubuntu service runner
-        "$SCRIPT_DIR/services/ubuntu/run.sh" "$@"
-        exit $?
-        ;;
-
     jira)
         # Jira ticket fetching
         "$SHARED_VENV/bin/python" -m libs.jira "$@"
@@ -343,64 +335,30 @@ case "$COMMAND" in
         exit $?
         ;;
 
-    draw)
+    excalidraw|draw)
         # Excalidraw diagrams
-        DIAGRAMS_DIR="$SCRIPT_DIR/data/diagrams"
         COMPOSE_FILE="$SCRIPT_DIR/services/compose.yml"
         SUBCOMMAND="${1:-open}"
 
-        case "$SUBCOMMAND" in
-            open|"")
-                # Start excalidraw and open browser
+        _ensure_excalidraw() {
+            if ! docker compose -f "$COMPOSE_FILE" ps excalidraw --format '{{.State}}' 2>/dev/null | grep -q running; then
                 info "Starting Excalidraw Canvas Server..."
                 docker compose -f "$COMPOSE_FILE" up excalidraw -d --quiet-pull 2>/dev/null
                 sleep 2
+            fi
+        }
+
+        case "$SUBCOMMAND" in
+            open|"")
+                _ensure_excalidraw
                 success "Excalidraw running at http://localhost:3000"
-                info "Opening browser..."
                 open "http://localhost:3000" 2>/dev/null || xdg-open "http://localhost:3000" 2>/dev/null || echo "Open http://localhost:3000 in your browser"
-                info ""
-                info "Claude can interact via: ./box.sh draw api <command>"
-                info "Diagrams saved to: $DIAGRAMS_DIR"
                 ;;
             api)
-                # Auto-start container if not running
-                if ! docker compose -f "$COMPOSE_FILE" ps excalidraw --format '{{.State}}' 2>/dev/null | grep -q running; then
-                    info "Starting Excalidraw Canvas Server..."
-                    docker compose -f "$COMPOSE_FILE" up excalidraw -d --quiet-pull 2>/dev/null
-                    sleep 2
-                fi
-                # Pass to Python CLI for API operations
-                shift  # Remove 'api' from args
+                _ensure_excalidraw
+                shift
                 "$SHARED_VENV/bin/python" -m libs.excalidraw "$@"
                 exit $?
-                ;;
-            new)
-                NAME="${2:-diagram}"
-                mkdir -p "$DIAGRAMS_DIR"
-                FILEPATH="$DIAGRAMS_DIR/$NAME.excalidraw"
-                if [ -f "$FILEPATH" ]; then
-                    error "File already exists: $FILEPATH"
-                    exit 1
-                fi
-                cat > "$FILEPATH" << 'TEMPLATE'
-{
-  "type": "excalidraw",
-  "version": 2,
-  "source": "box-cli",
-  "elements": [],
-  "appState": {
-    "gridSize": null,
-    "viewBackgroundColor": "#ffffff"
-  },
-  "files": {}
-}
-TEMPLATE
-                success "Created: $FILEPATH"
-                ;;
-            list)
-                mkdir -p "$DIAGRAMS_DIR"
-                info "Diagrams in $DIAGRAMS_DIR:"
-                ls -la "$DIAGRAMS_DIR"/*.excalidraw 2>/dev/null || info "  (none yet)"
                 ;;
             stop)
                 info "Stopping Excalidraw..."
@@ -408,22 +366,10 @@ TEMPLATE
                 success "Excalidraw stopped"
                 ;;
             *)
-                echo "Usage: ./box.sh draw [open|api|new|list|stop]"
-                echo ""
-                echo "Commands:"
-                echo "  open              Start Excalidraw and open browser (default)"
-                echo "  api <cmd>         Canvas API (health, query, push, clear, yaml)"
-                echo "  new <name>        Create new .excalidraw file"
-                echo "  list              List diagrams in data/diagrams/"
-                echo "  stop              Stop Excalidraw container"
-                echo ""
-                echo "API Examples:"
-                echo "  ./box.sh draw api health                    # Check server status"
-                echo "  ./box.sh draw api query                     # List elements on canvas"
-                echo "  ./box.sh draw api push data/diagrams/arch.yaml  # Push YAML diagram"
-                echo "  ./box.sh draw api push arch.yaml --clear        # Full clear + push"
-                echo "  ./box.sh draw api clear                     # Clear all elements"
-                echo "  ./box.sh draw api yaml                      # YAML format reference"
+                echo "Usage: ./box.sh excalidraw [open|api|stop]"
+                echo "  open          Start Excalidraw and open browser (default)"
+                echo "  api <cmd>     Canvas API (health, query, push, clear, yaml)"
+                echo "  stop          Stop Excalidraw container"
                 exit 1
                 ;;
         esac
