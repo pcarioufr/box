@@ -3,14 +3,14 @@
 An agentic toolbox for Product Managers, designed to work with Claude Code.
 
 It combines:
-- **Skills** - Natural language interfaces for common PM tasks (e.g., product analytics)
+- **Skills** - Natural language interfaces for common PM tasks (e.g., data exploration, knowledge curation)
 - **CLI tools** - Direct access to Datadog, Snowflake, Jira, Confluence, and Google Docs
-- **Knowledge bases** - Curated context that keeps Claude grounded in your domain
+- **Knowledge base** - Curated context that keeps Claude grounded in your domain, maintained organically via the `/knowledge` skill
 - **Self-maintaining** - The toolbox improves itself as you use it
 
 The tools run locally via `./box.sh`, with some commands optionally using a Docker container for isolation.
 
-> **Note:** This repo is public, but the `knowledge/` and `data/` directories are gitignored - they contain proprietary context specific to my work.
+> **Note:** This repo is public, but the `data/` directory is gitignored - it contains proprietary context specific to my work.
 
 
 ## Sibling Directories
@@ -43,35 +43,20 @@ cp env.example .env   # Add your credentials (Atlassian, Datadog, Snowflake)
 
 # Knowledge Base
 
-The `knowledge/` directory contains curated knowledge bases for skills:
+Curated knowledge lives in `_knowledge/` folders inside `data/`:
 
-## Product Analytics (`knowledge/pa/`)
+- **`data/_knowledge/`** — cross-cutting reference (tool schemas, Slack directory, general domain context)
+- **`data/<project>/_knowledge/`** — initiative-specific knowledge (e.g., `data/detection/_knowledge/`)
 
-Knowledge base for the unified `/pa` skill covering all product analytics data sources:
-- `rum.md` - Datadog RUM query patterns, filters, facets, and aggregation examples
-- `snowflake.md` - Semantic model defining core business entities, metrics, and data mappings
-- `jira.md` - Custom field mappings and JQL patterns for Jira projects
-- `notebooks.md` - Reference for creating Datadog notebooks using standard API format
-
-## General (`knowledge/general.md`)
-
-Domain knowledge about the business context:
-- Company information and organizational structure
-- Product area context and terminology
-- Competitive landscape
-- Business metrics and KPIs
-- Industry-specific concepts
-
-This file helps Claude understand the broader context when working on tasks, ensuring responses are grounded in the specific domain being worked on.
-
-These knowledge bases ensure consistency across queries and enable rapid answers to recurring questions.
+The `/knowledge` skill owns the curation rules: file templates, when to update silently vs. ask first, and explicit review passes. Knowledge files are living documents updated in-place — only distilled insights from pulled documents or explorations belong here, not raw outputs.
 
 
 # Claude Skills
 
 When using Claude Code, skills provide higher-level interfaces to the underlying libraries:
 
-- `/pa` - Product Analytics: query user behavior (Datadog RUM), business metrics (Snowflake), and qualitative feedback (Jira). Intelligently routes to the right data source(s) based on your question.
+- `/exploration` - Data exploration: query user behavior (Datadog RUM), business metrics (Snowflake), and qualitative feedback (Jira). Intelligently routes to the right data source(s) based on your question. Outputs go in `data/explorations/`.
+- `/knowledge` - Knowledge base curation: review, update, and maintain `_knowledge/` folders. Also runs organically during conversations to keep knowledge current.
 
 
 # MCP Servers

@@ -2,10 +2,6 @@
 
 This project contains utilities and data exports from Datadog's internal systems.
 
-## Available Skills
-
-- `/pa` - Product Analytics: query user behavior (Datadog RUM), business metrics (Snowflake), and qualitative feedback (Jira). Intelligently routes to the right data source(s) based on your question.
-
 ## CLI Tools
 
 All tools are accessed via `./box.sh <tool>`. Use `--help` on any command for full usage.
@@ -30,7 +26,7 @@ All tools are accessed via `./box.sh <tool>`. Use `--help` on any command for fu
 
 ## Working Folders
 
-Most work happens in **long-lived project directories** under `data/` (e.g., `data/monitorless-detection/`). Use the existing project folder when continuing work on an ongoing effort.
+Most work happens in **long-lived project directories** under `data/` (e.g., `data/detection/`). Use the existing project folder when continuing work on an ongoing effort.
 
 For **new, standalone explorations**, create a date-based folder under `data/explorations/`:
 
@@ -43,13 +39,22 @@ data/explorations/YYYY-MM-DD_short-description/
 └── ...
 ```
 
-For detailed working folder conventions (naming, when to create vs continue, master.md requirements), see the `/pa` skill documentation.
+For detailed working folder conventions (naming, when to create vs continue, master.md requirements), see the `/exploration` skill documentation.
 
 ## Directory Structure
 
 - `services/` - Service definitions (containers, workers, servers)
 - `libs/` - Shared code libraries (Python: jira, datadog, google, confluence, metabase)
-- `data/` - Working folders organized by date (see Working Folders above)
-- `knowledge/` - Curated knowledge bases (domain, Slack directory, PA patterns)
+- `data/` - Working folders and knowledge, organized by project
 - `.claude/skills/` - Custom Claude skills
 - `box.sh` - Main CLI entry point
+
+## Knowledge Base
+
+Curated domain knowledge lives in `_knowledge/` folders within `data/`. Read these for context before working on a topic.
+
+- `data/_knowledge/` — cross-cutting reference (tool schemas, Slack directory, general domain)
+- `data/<project>/_knowledge/` — initiative-specific knowledge (e.g. `data/detection/_knowledge/`)
+
+For curation rules and templates, see the `/knowledge` skill.
+

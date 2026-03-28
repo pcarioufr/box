@@ -1,9 +1,9 @@
 ---
-name: pa
-description: Product Analytics skill. Query user behavior (Datadog RUM), business metrics (Snowflake), and qualitative feedback (Jira) using natural language. Intelligently routes to the right data source(s) based on your question.
+name: exploration
+description: Data exploration skill. Query user behavior (Datadog RUM), business metrics (Snowflake), and qualitative feedback (Jira) using natural language. Intelligently routes to the right data source(s) based on your question. Outputs go in data/explorations/.
 ---
 
-# Product Analytics Skill
+# Exploration Skill
 
 Combine behavioral data (Datadog RUM), business data (Snowflake), and qualitative data (Jira) to answer product questions.
 
@@ -29,9 +29,9 @@ Analyze the user's question to determine which data source(s) to use:
 
 Read these **before** writing queries:
 
-- `knowledge/datadog/` — RUM query patterns, facets, filters, data model
-- `knowledge/snowflake/` — Tables, metrics, business definitions
-- `knowledge/jira/` — Custom field mappings, JQL patterns
+- `data/_knowledge/datadog/` — RUM query patterns, facets, filters, data model
+- `data/_knowledge/snowflake/` — Tables, metrics, business definitions
+- `data/_knowledge/jira/` — Custom field mappings, JQL patterns
 
 ## CLI Entry Points
 
@@ -56,7 +56,7 @@ All output goes in `data/explorations/YYYY-MM-DD_short-description/` with subfol
 
 ## master.md
 
-**After every investigation, update `master.md` in the working folder.** Use `.claude/skills/pa/master.md` as template. The task is not complete until master.md reflects the findings.
+**After every investigation, update `master.md` in the working folder.** Use `.claude/skills/exploration/master.md` as template. The task is not complete until master.md reflects the findings.
 
 ## Publishing
 
