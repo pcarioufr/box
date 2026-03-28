@@ -37,7 +37,11 @@
     "google": {
       "type": "http",
       "url": "https://google-workspace-mcp-server-834963730936.us-central1.run.app/mcp"
+    },
+    "gmail": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://gmail-mcp-server-834963730936.us-central1.run.app/mcp"]
     }
-
   }
 }
