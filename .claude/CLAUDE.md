@@ -16,6 +16,7 @@ All tools are accessed via `./box.sh <tool>`. Use `--help` on any command for fu
 | Datadog RUM | `./box.sh datadog rum` | Query/aggregate user behavior data |
 | Jira | `./box.sh jira fetch` | Fetch tickets with JQL |
 | Analysis | `./box.sh analysis` | A/B test comparison, clustering |
+| DD Admin | `./box.sh dd-admin monitor` | Debug monitor evaluation (VPN required) |
 
 ### Tips (not in --help)
 

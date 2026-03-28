@@ -56,6 +56,7 @@ The `/knowledge` skill owns the curation rules: file templates, when to update s
 When using Claude Code, skills provide higher-level interfaces to the underlying libraries:
 
 - `/exploration` - Data exploration: query user behavior (Datadog RUM), business metrics (Snowflake), and qualitative feedback (Jira). Intelligently routes to the right data source(s) based on your question. Outputs go in `data/explorations/`.
+- `/dd-admin` - Investigate monitor triggering issues using Datadog's internal Monitor Admin APIs. Guided workflow for customer escalations.
 - `/knowledge` - Knowledge base curation: review, update, and maintain `_knowledge/` folders. Also runs organically during conversations to keep knowledge current.
 
 
@@ -80,7 +81,10 @@ The `libs/` directory contains the underlying CLI tools accessible via `./box.sh
 - **Datadog** (`./box.sh datadog`) - Query and aggregate RUM data, fetch session timelines, create/update notebooks for Product Analytics
 - **Metabase** (`./box.sh metabase`) - Manage Metabase dashboards using YAML definitions with Terraform-like state tracking for pull/push workflows
 - **Analysis** (`./box.sh analysis`) - Statistical analysis for CSV data: A/B test comparison and exploratory analysis with clustering
+- **DD Admin** (`./box.sh dd-admin`) - Datadog internal admin tooling for debugging monitor evaluation
 - **Excalidraw** (`./box.sh draw`) - Local diagram editor for architecture diagrams, wireframes, and concept sketches
+
+> **Note:** The DD Admin CLI requires Datadog enterprise credentials and VPN access to internal APIs. It will not work outside of Datadog's corporate network.
 
 See [libs/README.md](libs/README.md) for details, or run `./box.sh <command> --help`.
 

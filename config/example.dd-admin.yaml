@@ -1,0 +1,28 @@
+# DD Admin configuration
+# Copy to dd-admin.yaml and fill in with your organization's internal hostnames.
+# This file is gitignored — do not commit the real config.
+
+monitor_admin:
+  # Cluster hostnames for Monitor Admin API (VPN-gated)
+  clusters:
+    us1: monitor-admin.us1.example.com
+    eu1: monitor-admin.eu1.example.com
+    # Add more clusters as needed
+
+  # Org ID → cluster mapping (min inclusive, max exclusive)
+  # The last entry (without max_org_id) is the fallback for all remaining IDs.
+  org_ranges:
+    - cluster: us1
+      min_org_id: 0
+      max_org_id: 1000000000
+    - cluster: eu1
+      min_org_id: 1000000000
+      max_org_id: 2000000000
+    - cluster: us3  # fallback
+      min_org_id: 2000000000
+
+  # Evaluator pools for re-evaluation (keyed by monitor_type_id)
+  # "default" is used when the monitor type has no specific pool.
+  evaluator_pools:
+    default: "evaluator-default.namespace.cluster.example.com:6400"
+    # 15: "slo-evaluator.namespace.cluster.example.com:6484"

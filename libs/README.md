@@ -270,6 +270,47 @@ libs/analysis/
 
 ---
 
+### DD Admin Library (`dd_admin/`)
+
+**Purpose**: Datadog internal admin tooling for debugging monitor evaluation during customer escalations
+
+> **Requires Datadog enterprise credentials and VPN access.** The Monitor Admin APIs are VPN-gated internal endpoints — this library will not work outside of Datadog's corporate network.
+
+```bash
+# Get current monitor state
+./box.sh dd-admin monitor state <org_id> <monitor_id>
+
+# List evaluations in a time range
+./box.sh dd-admin monitor results <org_id> <monitor_id> --from 2026-03-01T10:00:00Z --to 2026-03-01T12:00:00Z
+
+# Per-group values, thresholds, and margin analysis
+./box.sh dd-admin monitor detail <org_id> <result_id> --timestamp 2026-03-01T10:30:00Z --group statuscode:503
+
+# Alert history (triggered/resolved/notified timestamps)
+./box.sh dd-admin monitor payload <org_id> <monitor_id>
+
+# Re-evaluate a past result with current data (late-data diagnosis)
+./box.sh dd-admin monitor reevaluate <org_id> <result_id> --timestamp 2026-03-01T10:30:00Z
+
+# Search downtimes
+./box.sh dd-admin monitor downtimes <org_id> "monitor_id:12345"
+```
+
+**Features**:
+- Auto-derives cluster from org_id (with `--cluster` override)
+- Margin analysis: how far values are from thresholds
+- Re-evaluation to diagnose late-arriving data issues
+- Downtime search to check if monitors were silenced
+
+**Architecture**:
+```
+libs/dd_admin/
+├── __main__.py          # CLI entry point
+└── monitor_admin.py     # Monitor Admin API client + formatters
+```
+
+---
+
 ### Common Library (`common/`)
 
 **Purpose**: Shared utilities used by multiple libraries
@@ -300,6 +341,9 @@ libs/
 ├── README.md              # This file
 ├── common/                # Shared utilities
 │   └── config.py          # URL parsing, slugify
+├── dd_admin/              # Datadog internal admin tooling (VPN required)
+│   ├── __main__.py        # CLI entry point
+│   └── monitor_admin.py   # Monitor Admin API client
 ├── google/                # Google Docs pull
 │   ├── __main__.py        # CLI entry point
 │   ├── pull-gdocs.gs      # Apps Script for doc conversion

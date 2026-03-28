@@ -57,6 +57,11 @@ usage() {
     echo "  datadog fetch view       Fetch raw RUM view attributes as YAML"
     echo "  excalidraw [open|api|stop]  Diagrams with Excalidraw (YAML push workflow)"
     echo "  metabase dashboard       Pull/push Metabase dashboards (YAML format)"
+    echo "  dd-admin monitor state   Get current monitor state (VPN required)"
+    echo "  dd-admin monitor results List evaluations in a time range"
+    echo "  dd-admin monitor detail  Per-group values, thresholds, margins"
+    echo "  dd-admin monitor reevaluate  Re-evaluate with current data"
+    echo "  dd-admin monitor downtimes   Search downtimes"
     echo "  analysis compare         A/B test comparison with statistical tests"
     echo "  analysis analyze         Exploratory analysis with clustering"
     echo ""
@@ -84,6 +89,7 @@ usage() {
     echo "  ./box.sh datadog --help"
     echo "  ./box.sh metabase --help"
     echo "  ./box.sh analysis --help"
+    echo "  ./box.sh dd-admin --help"
     echo ""
 }
 
@@ -243,6 +249,23 @@ run_setup() {
         info "Run setup again after creating .env to configure shell variables."
     fi
 
+    # DD Admin config
+    log_section "🔧 DD Admin Configuration"
+
+    DD_ADMIN_CONFIG="$SCRIPT_DIR/config/dd-admin.yaml"
+    DD_ADMIN_EXAMPLE="$SCRIPT_DIR/config/example.dd-admin.yaml"
+
+    if [ -f "$DD_ADMIN_CONFIG" ]; then
+        success "✅ DD Admin config already exists at config/dd-admin.yaml"
+    elif [ -f "$DD_ADMIN_EXAMPLE" ]; then
+        info "Creating DD Admin config from example..."
+        cp "$DD_ADMIN_EXAMPLE" "$DD_ADMIN_CONFIG"
+        success "✅ Created config/dd-admin.yaml from example"
+        warning "⚠️  Edit config/dd-admin.yaml with your organization's internal hostnames"
+    else
+        warning "⚠️  No DD Admin example config found — skipping"
+    fi
+
     # Final summary
     log_section "✅ Setup Complete! 🎉"
 
@@ -332,6 +355,12 @@ case "$COMMAND" in
     analysis)
         # Statistical analysis for CSV data
         "$SHARED_VENV/bin/python" -m libs.analysis "$@"
+        exit $?
+        ;;
+
+    dd-admin)
+        # Datadog internal admin tooling
+        "$SHARED_VENV/bin/python" -m libs.dd_admin "$@"
         exit $?
         ;;
 
