@@ -198,7 +198,7 @@ def fetch_jira_tickets(
     if jql is None:
         jql = f"project = {project} ORDER BY created DESC"
 
-    # API endpoint (v3 - using /search/jql as /search is deprecated)
+    # API endpoint — /search/jql uses cursor-based pagination via nextPageToken
     url = "https://datadoghq.atlassian.net/rest/api/3/search/jql"
     headers = {
         "Content-Type": "application/json",
@@ -206,18 +206,20 @@ def fetch_jira_tickets(
     }
 
     all_issues = []
-    start_at = 0
+    next_page_token = None
     results_per_page = 100
+    page = 1
 
     while len(all_issues) < max_results:
-        logging.info(f"Fetching results starting at {start_at}...")
+        logging.info(f"Fetching page {page}...")
 
         params = {
             "jql": jql,
-            "startAt": start_at,
             "maxResults": min(results_per_page, max_results - len(all_issues)),
             "fields": ",".join(fields)
         }
+        if next_page_token:
+            params["nextPageToken"] = next_page_token
 
         response = requests.get(url, headers=headers, params=params)
 
@@ -252,7 +254,6 @@ def fetch_jira_tickets(
                     }
                     for link in issue["fields"]["issuelinks"]
                 ]
-                # Remove from fields to avoid duplication
                 del simplified_issue["fields"]["issuelinks"]
 
             # Simplify comments if present
@@ -266,9 +267,7 @@ def fetch_jira_tickets(
                     }
                     for comment in comment_data.get("comments", [])
                 ]
-                # Keep total count
                 simplified_issue["comment_total"] = comment_data.get("total", 0)
-                # Remove from fields to avoid duplication
                 del simplified_issue["fields"]["comment"]
 
             # Convert ADF fields to text
@@ -280,19 +279,14 @@ def fetch_jira_tickets(
 
             all_issues.append(simplified_issue)
 
-        # Check if there are more results
-        total = data.get('total', float('inf'))  # Default to infinity if not provided
-        start_at += len(issues)
+        next_page_token = data.get('nextPageToken')
+        logging.info(f"Fetched {len(all_issues)} issues total")
+        page += 1
 
-        if total != float('inf'):
-            logging.info(f"Fetched {len(all_issues)} of {min(total, max_results)} issues")
-        else:
-            logging.info(f"Fetched {len(all_issues)} issues (total unknown)")
-
-        # Stop if we've reached max_results or if total is known and we've fetched all
         if len(all_issues) >= max_results:
             break
-        if total != float('inf') and start_at >= total:
+        if not next_page_token:
+            logging.info("No nextPageToken — all results fetched")
             break
 
     logging.info(f"Total issues fetched: {len(all_issues)}")
