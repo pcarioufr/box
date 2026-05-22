@@ -1,3 +1,8 @@
+# Workflow Preferences
+
+- When drafting text for Pierre (Slack messages, doc sections, etc.), automatically copy the final draft to the clipboard using `./box.sh utils copy "content"` without asking.
+- Do not interact with git (checkout, add, commit, push) unless explicitly asked by the user.
+
 # Project Context
 
 This project contains utilities and data exports from Datadog's internal systems.
@@ -27,7 +32,7 @@ All tools are accessed via `./box.sh <tool>`. Use `--help` on any command for fu
 
 ## Working Folders
 
-Most work happens in **long-lived project directories** under `data/` (e.g., `data/detection/`). Use the existing project folder when continuing work on an ongoing effort.
+Most work happens in **long-lived project directories** under `data/` (e.g., `data/detection/`). Use the existing project folder when continuing work on an ongoing effort. **Note: `data/` is git-ignored — work stays local to your machine.**
 
 For **new, standalone explorations**, create a date-based folder under `data/explorations/`:
 

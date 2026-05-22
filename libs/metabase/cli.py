@@ -21,7 +21,8 @@ from pathlib import Path
 import yaml
 
 from .dashboard import Dashboard
-from .utils import get_metabase_config, get_state_dir, load_env
+from .question import Question
+from .utils import get_metabase_config, get_state_dir, load_env, api_request
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -305,6 +306,83 @@ See libs/metabase/model.md for complete reference.
     return 0
 
 
+def question_move(args):
+    """Move a question to a different collection, optionally renaming it."""
+    try:
+        config = get_metabase_config()
+
+        # Fetch current question to get its name
+        url = f"{config['url']}/api/card/{args.question_id}"
+        existing = api_request(url, config['api_key'])
+        current_name = existing.get("name", f"Question {args.question_id}")
+        current_collection = existing.get("collection_id")
+        new_name = args.name if args.name else current_name
+
+        # Build minimal payload: just collection_id and name (required by Metabase PUT)
+        payload = {
+            "name": new_name,
+            "collection_id": args.parent,
+        }
+
+        put_url = f"{config['url']}/api/card/{args.question_id}"
+        api_request(put_url, config['api_key'], method="PUT", data=payload)
+
+        rename_note = f' → "{new_name}"' if new_name != current_name else ""
+        print(f"✅ Question {args.question_id}{rename_note}: collection {current_collection} → {args.parent}")
+        print(f"   {config['url']}/question/{args.question_id}")
+        return 0
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        if args.debug:
+            import traceback
+            traceback.print_exc()
+        return 1
+
+
+def question_orphans(args):
+    """List questions in a collection that are not used by a given dashboard."""
+    try:
+        config = get_metabase_config()
+
+        # Load state file to get active question IDs
+        state_path = Path(args.dashboard_dir) / ".state.yaml"
+        if not state_path.exists():
+            logger.error(f"No .state.yaml found in {args.dashboard_dir}")
+            return 1
+
+        with open(state_path, 'r') as f:
+            state = yaml.safe_load(f)
+
+        active_ids = set(int(k) for k in state.get("questions", {}).keys())
+
+        # Fetch all questions in the collection
+        url = f"{config['url']}/api/collection/{args.collection}/items?models=card&limit=200"
+        response = api_request(url, config['api_key'])
+        items = response.get("data", [])
+
+        orphans = [q for q in items if q.get("id") not in active_ids]
+        active = [q for q in items if q.get("id") in active_ids]
+
+        print(f"Collection {args.collection}: {len(items)} questions total")
+        print(f"  ✅ {len(active)} in use by dashboard {state['dashboard']['id']}")
+        print(f"  🗑  {len(orphans)} orphaned\n")
+
+        if orphans:
+            print("Orphaned questions (not in dashboard):")
+            for q in sorted(orphans, key=lambda x: x.get("id", 0)):
+                print(f"  [{q['id']}] {q['name']}")
+            print(f"\nTo move all orphans to collection {args.target}:")
+            for q in orphans:
+                print(f"  ./box.sh metabase question move {q['id']} --parent {args.target}")
+        return 0
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        if args.debug:
+            import traceback
+            traceback.print_exc()
+        return 1
+
+
 def question_format(args):
     """Show question YAML format help."""
     format_help = """
@@ -445,10 +523,32 @@ def setup_question_parser(subparsers, common_parser):
     """Setup question command parsers."""
     question_parser = subparsers.add_parser(
         'question',
-        help='Question format reference'
+        help='Question operations (move, orphans, format)'
     )
     question_subparsers = question_parser.add_subparsers(dest='subcommand', help='Question subcommands')
-    
+
+    # Question move
+    move_parser = question_subparsers.add_parser(
+        'move',
+        parents=[common_parser],
+        help='Move a question to a different collection'
+    )
+    move_parser.add_argument('question_id', type=int, help='Question ID to move')
+    move_parser.add_argument('--parent', type=int, required=True, help='Target collection ID')
+    move_parser.add_argument('--name', type=str, default=None, help='Optional new name for the question')
+    move_parser.set_defaults(func=question_move)
+
+    # Question orphans
+    orphans_parser = question_subparsers.add_parser(
+        'orphans',
+        parents=[common_parser],
+        help='List questions in a collection not used by a dashboard'
+    )
+    orphans_parser.add_argument('--collection', type=int, required=True, help='Collection ID to audit')
+    orphans_parser.add_argument('--dashboard-dir', type=str, required=True, help='Dashboard directory (contains .state.yaml)')
+    orphans_parser.add_argument('--target', type=int, default=None, help='Target collection ID for move suggestions')
+    orphans_parser.set_defaults(func=question_orphans)
+
     # Question format
     format_parser = question_subparsers.add_parser(
         'format',

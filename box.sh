@@ -163,7 +163,7 @@ run_setup() {
     # Verify installations
     log_section "🔍 Verifying Installations"
 
-    if python -c "import requests" 2>/dev/null; then
+    if python3 -c "import requests" 2>/dev/null; then
         success "✅ requests"
     else
         error "Failed to import requests"
@@ -399,6 +399,28 @@ case "$COMMAND" in
                 echo "  open          Start Excalidraw and open browser (default)"
                 echo "  api <cmd>     Canvas API (health, query, push, clear, yaml)"
                 echo "  stop          Stop Excalidraw container"
+                exit 1
+                ;;
+        esac
+        exit 0
+        ;;
+
+    utils)
+        # Utility commands
+        SUBCOMMAND="${1:-}"
+        shift 2>/dev/null || true
+        case "$SUBCOMMAND" in
+            copy)
+                if [ -z "$1" ]; then
+                    error "Usage: ./box.sh utils copy <text>"
+                    exit 1
+                fi
+                printf '%s' "$*" | pbcopy
+                success "Copied to clipboard"
+                ;;
+            *)
+                echo "Usage: ./box.sh utils <command>"
+                echo "  copy <text>   Copy text to clipboard"
                 exit 1
                 ;;
         esac
