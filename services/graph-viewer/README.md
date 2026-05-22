@@ -1,24 +1,21 @@
 # Graph Viewer
 
-Interactive web application for visualizing directed graphs with weighted edges.
+Interactive web application for visualizing graphs with customizable node and edge properties.
 
 ## Overview
 
-This service provides a web interface to upload and visualize graph data. It displays relationships between nodes with edges weighted by a numeric value (e.g., likelihood, frequency, strength).
+Upload graph data as CSV files and explore relationships interactively. Supports node sizing, coloring, per-edge directionality, and filterable properties.
 
 ## Features
 
-- **CSV Upload**: Upload co-visitation data in simple 3-column format
-- **Threshold Filtering**: Filter edges by likelihood percentage (default: 10%)
-- **Interactive Graph**: Pan, zoom, and click on nodes/edges
-- **Multiple Layouts**: Choose from 6 different graph layout algorithms
-  - Hierarchical (DAG) - default, left-to-right flow
-  - Circle - nodes in a circle
-  - Grid - nodes in a grid
-  - Concentric - nodes in concentric circles
-  - Breadth First - tree-like layout
-  - Force Directed - physics-based layout
-- **Real-time Stats**: View node and edge counts
+- **Two-file format**: Separate nodes CSV (optional) and edges CSV for full control over visual properties
+- **Node properties**: Size, color, and label per node
+- **Edge properties**: Weight (controls thickness), color, label, and per-edge directed/undirected
+- **Filterable properties**: Any `prop_*` column on nodes becomes a multi-select filter in the UI
+- **Label behavior**: Labels hidden by default; shown on hover, toggled on/off by clicking a node
+- **Threshold filtering**: Filter edges by minimum weight
+- **Multiple layouts**: Hierarchical (DAG), Circle, Grid, Concentric, Breadth First, Force Directed
+- **Interactive**: Pan, zoom, hover to highlight neighborhoods, click for persistent labels
 
 ## Usage
 
@@ -28,92 +25,120 @@ This service provides a web interface to upload and visualize graph data. It dis
 docker compose -f services/compose.yml up graph-viewer
 ```
 
-Or start all services:
+Available at: **http://localhost:5001**
 
-```bash
-docker compose -f services/compose.yml up
-```
-
-The service will be available at: **http://localhost:5001**
-
-### Stopping the Service
+### Stopping
 
 ```bash
 docker compose -f services/compose.yml down graph-viewer
 ```
 
-### Data Format
+## Data Format
 
-Upload a CSV file with 3 columns (column names are ignored):
-1. **Column 1**: Source node name
-2. **Column 2**: Target node name
-3. **Column 3**: Edge weight (numeric value, e.g., 0-100)
+### Edges CSV (required)
 
-Example CSV:
+| Column | Required | Description |
+|--------|----------|-------------|
+| `source` | yes | Source node ID |
+| `target` | yes | Target node ID |
+| `weight` | no | Numeric weight (controls edge thickness). Default: 1.0 |
+| `label` | no | Edge label text. Default: weight value |
+| `color` | no | Hex color (e.g., `#58a6ff`). Default: blue |
+| `directed` | no | `true` for arrow, `false` for undirected. Default: `true` |
+
 ```csv
-source,target,weight
-auth,dashboard,45.5
-auth,settings,23.1
-dashboard,metrics,67.8
-dashboard,logs,34.2
-settings,profile,89.3
+source,target,weight,label,directed
+monitor-a,monitor-b,3.5,3.5× co=2 Δ50m,true
+monitor-c,monitor-d,1.2,1.2× co=4 Δ12m,false
 ```
 
-### Workflow
+### Nodes CSV (optional)
 
-1. Open http://localhost:5001 in your browser
-2. Click "Choose File" and select your CSV file
-3. Adjust the threshold if needed (default: 10) - edges below this value will be filtered out
-4. Click "Load Graph" to visualize
-5. Use the Layout dropdown to change the visualization style
-6. Interact with the graph:
-   - Click and drag to pan
-   - Scroll to zoom
-   - Click nodes or edges to select them (details logged to console)
+If omitted, nodes are auto-created from edge endpoints with default styling.
 
-## Technology Stack
+| Column | Required | Description |
+|--------|----------|-------------|
+| `id` | yes | Must match source/target values in edges CSV |
+| `label` | no | Display name. Default: id |
+| `size` | no | Numeric value (auto-normalized to visual range). Default: uniform |
+| `color` | no | Hex color (e.g., `#0a3069`). Default: blue |
+| `prop_*` | no | Filterable property (see below) |
 
-- **Backend**: Python Flask
-- **Visualization**: Cytoscape.js (network graph library)
-- **Layouts**: Dagre (hierarchical layout algorithm)
-- **Data Processing**: Pandas
-
-## Port
-
-- **Container Port**: 5000
-- **Host Port**: 5001 (mapped in docker-compose.yml)
-
-## Development
-
-To rebuild after changes:
-
-```bash
-docker compose -f services/compose.yml build graph-viewer
-docker compose -f services/compose.yml up graph-viewer
+```csv
+id,label,size,color,prop_service
+monitor-a,My Monitor A,2.5,#b3d9ff,service-x
+monitor-b,My Monitor B,0.8,#0a3069,service-x service-y
 ```
 
-## API Endpoint
+### Filterable Properties (`prop_*`)
+
+Any column in the nodes CSV prefixed with `prop_` becomes a multi-select filter in the UI.
+
+- The filter name is derived from the column name (e.g., `prop_service` becomes "service")
+- **Multi-valued**: Use space-separated values for nodes that belong to multiple categories (e.g., `service-a service-b`)
+- A node matches a filter if **any** of its values are in the selected set
+- When no values are selected (or "All" is selected), all nodes are shown
+- Edges are hidden when either endpoint is hidden
+
+### Legacy Format
+
+For backward compatibility, a single CSV with positional columns also works:
+- Column 1: source, Column 2: target, Column 3: weight, Column 4 (optional): label
+
+## Workflow
+
+1. Open http://localhost:5001
+2. Select an edges CSV (and optionally a nodes CSV)
+3. Adjust "Min weight" to filter low-weight edges
+4. Click "Load Graph"
+5. Use filters (if `prop_*` columns exist) to isolate subsets
+6. Hover nodes to see labels and highlight neighborhoods
+7. Click nodes to pin their labels on the graph
+8. Change layout as needed
+
+## API
 
 ### POST /api/upload
 
-Upload CSV data and get filtered graph.
-
-**Parameters:**
-- `file`: CSV file (multipart/form-data)
-- `threshold`: Minimum edge weight (default: 10.0)
+**Form parameters:**
+- `edges`: Edges CSV file (required)
+- `nodes`: Nodes CSV file (optional)
+- `threshold`: Minimum edge weight (default: 0)
 
 **Response:**
 ```json
 {
   "elements": [
-    {"data": {"id": "node1", "label": "node1"}},
-    {"data": {"id": "node1-node2", "source": "node1", "target": "node2", "likelihood": 45.5, "label": "45.5%"}}
+    {"data": {"id": "mon-a", "label": "Monitor A", "size": 2.5, "color": "#b3d9ff", "prop_service": "svc-x"}},
+    {"data": {"id": "mon-a->mon-b", "source": "mon-a", "target": "mon-b", "weight": 3.5, "label": "3.5×", "directed": true}}
   ],
+  "filters": {
+    "prop_service": {"name": "service", "values": ["svc-x", "svc-y", "svc-z"]}
+  },
   "stats": {
     "total_edges": 100,
     "filtered_edges": 42,
     "nodes": 15,
-    "threshold": 10.0
+    "threshold": 0
   }
 }
+```
+
+## Technology Stack
+
+- **Backend**: Python Flask
+- **Visualization**: Cytoscape.js
+- **Layouts**: Dagre (hierarchical layout)
+- **Data Processing**: Pandas
+
+## Port
+
+- **Container Port**: 5000
+- **Host Port**: 5001
+
+## Development
+
+```bash
+docker compose -f services/compose.yml build graph-viewer
+docker compose -f services/compose.yml up graph-viewer
 ```

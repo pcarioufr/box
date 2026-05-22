@@ -1,14 +1,19 @@
 let cy = null;
-const fileInput = document.getElementById('fileInput');
+const edgesInput = document.getElementById('edgesInput');
+const nodesInput = document.getElementById('nodesInput');
 const uploadBtn = document.getElementById('uploadBtn');
 const thresholdInput = document.getElementById('threshold');
 const layoutSelect = document.getElementById('layoutSelect');
 const errorDiv = document.getElementById('error');
 const statsDiv = document.getElementById('stats');
-const legendDiv = document.getElementById('legend');
+const detailPanel = document.getElementById('detailPanel');
+const detailContent = document.getElementById('detailContent');
+const detailEmpty = detailPanel.querySelector('.detail-empty');
+const detailName = document.getElementById('detailName');
+const detailProps = document.getElementById('detailProps');
 
-fileInput.addEventListener('change', () => {
-    uploadBtn.disabled = !fileInput.files.length;
+edgesInput.addEventListener('change', () => {
+    uploadBtn.disabled = !edgesInput.files.length;
     hideError();
 });
 
@@ -16,7 +21,7 @@ uploadBtn.addEventListener('click', loadGraph);
 layoutSelect.addEventListener('change', applyLayout);
 
 thresholdInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && fileInput.files.length) {
+    if (e.key === 'Enter' && edgesInput.files.length) {
         loadGraph();
     }
 });
@@ -38,11 +43,12 @@ function updateStats(stats) {
 }
 
 async function loadGraph() {
-    const file = fileInput.files[0];
+    const edgesFile = edgesInput.files[0];
+    const nodesFile = nodesInput.files.length ? nodesInput.files[0] : null;
     const threshold = parseFloat(thresholdInput.value);
 
-    if (!file) {
-        showError('Please select a file');
+    if (!edgesFile) {
+        showError('Please select an edges file');
         return;
     }
 
@@ -52,7 +58,10 @@ async function loadGraph() {
 
     try {
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('edges', edgesFile);
+        if (nodesFile) {
+            formData.append('nodes', nodesFile);
+        }
         formData.append('threshold', threshold);
 
         const response = await fetch('/api/upload', {
@@ -67,9 +76,10 @@ async function loadGraph() {
         }
 
         renderGraph(data.elements);
+        buildFilters(data.filters || {});
         updateStats(data.stats);
         layoutSelect.disabled = false;
-        legendDiv.style.display = 'block';
+        detailPanel.style.display = 'block';
 
     } catch (error) {
         showError(error.message);
@@ -79,27 +89,42 @@ async function loadGraph() {
     }
 }
 
+// Default visual constants
+const DEFAULT_NODE_COLOR = '#58a6ff';
+const DEFAULT_EDGE_COLOR = '#58a6ff';
+const MIN_NODE_SIZE = 30;
+const MAX_NODE_SIZE = 80;
+const MIN_EDGE_WIDTH = 1.5;
+const MAX_EDGE_WIDTH = 10;
+
 function renderGraph(elements) {
     const container = document.getElementById('cy');
     container.innerHTML = '';
 
-    // Calculate likelihood range for width mapping
     const edges = elements.filter(el => el.data.source && el.data.target);
-    const likelihoods = edges.map(e => e.data.likelihood);
-    const minLikelihood = Math.min(...likelihoods);
-    const maxLikelihood = Math.max(...likelihoods);
+    const nodes = elements.filter(el => !el.data.source);
 
-    // Width mapping constants
-    const MIN_WIDTH = 1.5;
-    const MAX_WIDTH = 10;
+    // Compute weight range for edge width mapping
+    const weights = edges.map(e => e.data.weight || 0);
+    const minWeight = Math.min(...weights);
+    const maxWeight = Math.max(...weights);
 
-    // Function to map likelihood to width
-    const mapWidth = (likelihood) => {
-        if (maxLikelihood === minLikelihood) {
-            return (MIN_WIDTH + MAX_WIDTH) / 2;
-        }
-        const normalized = (likelihood - minLikelihood) / (maxLikelihood - minLikelihood);
-        return MIN_WIDTH + normalized * (MAX_WIDTH - MIN_WIDTH);
+    const mapWidth = (w) => {
+        if (maxWeight === minWeight) return (MIN_EDGE_WIDTH + MAX_EDGE_WIDTH) / 2;
+        const t = (w - minWeight) / (maxWeight - minWeight);
+        return MIN_EDGE_WIDTH + t * (MAX_EDGE_WIDTH - MIN_EDGE_WIDTH);
+    };
+
+    // Compute size range for node size mapping
+    const sizes = nodes.map(n => n.data.size).filter(s => s != null);
+    const minSize = sizes.length ? Math.min(...sizes) : 0;
+    const maxSize = sizes.length ? Math.max(...sizes) : 0;
+    const hasSizes = sizes.length > 0 && maxSize > minSize;
+
+    const mapNodeSize = (s) => {
+        if (!hasSizes || s == null) return (MIN_NODE_SIZE + MAX_NODE_SIZE) / 2;
+        const t = (s - minSize) / (maxSize - minSize);
+        return MIN_NODE_SIZE + t * (MAX_NODE_SIZE - MIN_NODE_SIZE);
     };
 
     cy = cytoscape({
@@ -109,36 +134,43 @@ function renderGraph(elements) {
             {
                 selector: 'node',
                 style: {
-                    'background-color': '#58a6ff',
-                    'label': 'data(label)',
+                    'background-color': (ele) => ele.data('color') || DEFAULT_NODE_COLOR,
+                    'label': '',
                     'color': '#c9d1d9',
                     'text-valign': 'center',
                     'text-halign': 'center',
-                    'font-size': '12px',
+                    'font-size': '11px',
                     'font-weight': '600',
                     'text-outline-color': '#0d1117',
                     'text-outline-width': 3,
-                    'width': 60,
-                    'height': 60,
-                    'border-width': 3,
-                    'border-color': '#1f6feb',
-                    'border-opacity': 0.8
+                    'width': (ele) => mapNodeSize(ele.data('size')),
+                    'height': (ele) => mapNodeSize(ele.data('size')),
+                    'border-width': 2,
+                    'border-color': (ele) => ele.data('color') || '#1f6feb',
+                    'border-opacity': 0.8,
+                    'text-wrap': 'wrap',
+                    'text-max-width': '120px',
+                }
+            },
+            {
+                selector: 'node.show-label',
+                style: {
+                    'label': 'data(label)',
                 }
             },
             {
                 selector: 'node.hover',
                 style: {
-                    'background-color': '#79c0ff',
-                    'border-color': '#79c0ff',
+                    'label': 'data(label)',
                     'border-width': 4,
-                    'border-opacity': 1
+                    'border-opacity': 1,
+                    'z-index': 999,
                 }
             },
             {
                 selector: 'node:selected',
                 style: {
-                    'background-color': '#56d364',
-                    'border-color': '#3fb950',
+                    'border-color': '#ffffff',
                     'border-width': 5,
                     'border-opacity': 1
                 }
@@ -146,12 +178,12 @@ function renderGraph(elements) {
             {
                 selector: 'edge',
                 style: {
-                    'width': (ele) => mapWidth(ele.data('likelihood')),
-                    'line-color': '#58a6ff',
-                    'target-arrow-color': '#58a6ff',
-                    'target-arrow-shape': 'triangle',
+                    'width': (ele) => mapWidth(ele.data('weight') || 0),
+                    'line-color': (ele) => ele.data('color') || DEFAULT_EDGE_COLOR,
+                    'target-arrow-color': (ele) => ele.data('color') || DEFAULT_EDGE_COLOR,
+                    'target-arrow-shape': (ele) => ele.data('directed') ? 'triangle' : 'none',
                     'curve-style': 'bezier',
-                    'arrow-scale': (ele) => 1 + mapWidth(ele.data('likelihood')) / MAX_WIDTH * 0.8,
+                    'arrow-scale': (ele) => 1 + mapWidth(ele.data('weight') || 0) / MAX_EDGE_WIDTH * 0.8,
                     'label': 'data(label)',
                     'font-size': '10px',
                     'text-rotation': 'autorotate',
@@ -166,9 +198,7 @@ function renderGraph(elements) {
             {
                 selector: 'edge.hover',
                 style: {
-                    'line-color': '#79c0ff',
-                    'target-arrow-color': '#79c0ff',
-                    'width': (ele) => mapWidth(ele.data('likelihood')) * 1.5,
+                    'width': (ele) => mapWidth(ele.data('weight') || 0) * 1.5,
                     'opacity': 1,
                     'z-index': 999
                 }
@@ -176,8 +206,6 @@ function renderGraph(elements) {
             {
                 selector: 'edge.highlighted',
                 style: {
-                    'line-color': '#79c0ff',
-                    'target-arrow-color': '#79c0ff',
                     'opacity': 1,
                     'z-index': 998
                 }
@@ -187,22 +215,18 @@ function renderGraph(elements) {
                 style: {
                     'line-color': '#56d364',
                     'target-arrow-color': '#56d364',
-                    'width': (ele) => mapWidth(ele.data('likelihood')) * 1.8,
+                    'width': (ele) => mapWidth(ele.data('weight') || 0) * 1.8,
                     'opacity': 1,
                     'z-index': 999
                 }
             },
             {
                 selector: 'node.dimmed',
-                style: {
-                    'opacity': 0.3
-                }
+                style: { 'opacity': 0.3 }
             },
             {
                 selector: 'edge.dimmed',
-                style: {
-                    'opacity': 0.2
-                }
+                style: { 'opacity': 0.2 }
             }
         ],
         layout: {
@@ -215,46 +239,206 @@ function renderGraph(elements) {
         maxZoom: 3
     });
 
-    // Add click handler for nodes and edges
+    let pinnedNode = null;
+
+    // Click: toggle persistent label + pin detail panel
     cy.on('tap', 'node', function(evt) {
         const node = evt.target;
-        console.log('Node clicked:', node.data());
+        node.toggleClass('show-label');
+        if (node.hasClass('show-label')) {
+            pinnedNode = node;
+            showDetailPanel(node);
+        } else {
+            pinnedNode = null;
+            hideDetailPanel();
+        }
+    });
+    // Click on background: unpin
+    cy.on('tap', function(evt) {
+        if (evt.target === cy) {
+            if (pinnedNode) {
+                pinnedNode.removeClass('show-label');
+                pinnedNode = null;
+                hideDetailPanel();
+            }
+        }
     });
 
-    cy.on('tap', 'edge', function(evt) {
-        const edge = evt.target;
-        console.log('Edge clicked:', edge.data());
-    });
-
-    // Node hover effects
+    // Node hover: highlight neighbourhood + show detail panel
     cy.on('mouseover', 'node', function(evt) {
         const node = evt.target;
         const connectedEdges = node.connectedEdges();
         const connectedNodes = connectedEdges.connectedNodes();
-
-        // Dim all elements
         cy.elements().addClass('dimmed');
-
-        // Highlight hovered node and connected elements
         node.removeClass('dimmed').addClass('hover');
         connectedEdges.removeClass('dimmed').addClass('highlighted');
         connectedNodes.removeClass('dimmed');
+        showDetailPanel(node);
     });
-
-    cy.on('mouseout', 'node', function(evt) {
+    cy.on('mouseout', 'node', function() {
         cy.elements().removeClass('dimmed hover highlighted');
+        // If a node is pinned, show its details; otherwise clear
+        if (pinnedNode) {
+            showDetailPanel(pinnedNode);
+        } else {
+            hideDetailPanel();
+        }
     });
 
-    // Edge hover effects
+    // Edge hover
     cy.on('mouseover', 'edge', function(evt) {
-        const edge = evt.target;
-        edge.addClass('hover');
+        evt.target.addClass('hover');
+    });
+    cy.on('mouseout', 'edge', function(evt) {
+        evt.target.removeClass('hover');
+    });
+}
+
+// --- Filters ---
+
+const filtersDiv = document.getElementById('filters');
+
+function buildFilters(filters) {
+    filtersDiv.innerHTML = '';
+    const keys = Object.keys(filters);
+    if (keys.length === 0) {
+        filtersDiv.style.display = 'none';
+        return;
+    }
+    filtersDiv.style.display = 'flex';
+
+    for (const propKey of keys) {
+        const { name, values } = filters[propKey];
+
+        const group = document.createElement('div');
+        group.className = 'filter-group';
+
+        const label = document.createElement('label');
+        label.textContent = name;
+        group.appendChild(label);
+
+        const select = document.createElement('select');
+        select.multiple = true;
+        select.dataset.propKey = propKey;
+        select.size = Math.min(values.length + 1, 6);
+
+        // "All" option at top
+        const allOpt = document.createElement('option');
+        allOpt.value = '__all__';
+        allOpt.textContent = `All (${values.length})`;
+        allOpt.selected = true;
+        select.appendChild(allOpt);
+
+        for (const v of values) {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v;
+            select.appendChild(opt);
+        }
+
+        select.addEventListener('change', () => {
+            const selected = Array.from(select.selectedOptions).map(o => o.value);
+            // If "All" is among the selection, or nothing specific selected, treat as all
+            if (selected.includes('__all__')) {
+                // Deselect individual values, keep only All
+                for (const opt of select.options) {
+                    opt.selected = opt.value === '__all__';
+                }
+            } else if (selected.length === 0) {
+                // Nothing selected — revert to All
+                select.options[0].selected = true;
+            }
+            applyFilters();
+        });
+
+        group.appendChild(select);
+        filtersDiv.appendChild(group);
+    }
+}
+
+function applyFilters() {
+    if (!cy) return;
+
+    // Collect active filter selections
+    const activeFilters = {};
+    for (const select of filtersDiv.querySelectorAll('select')) {
+        const propKey = select.dataset.propKey;
+        const selected = Array.from(select.selectedOptions).map(o => o.value);
+        if (!selected.includes('__all__') && selected.length > 0) {
+            activeFilters[propKey] = new Set(selected);
+        }
+    }
+
+    const filterKeys = Object.keys(activeFilters);
+    if (filterKeys.length === 0) {
+        // No filters active — show everything
+        cy.elements().removeClass('filtered');
+        cy.elements().style('display', 'element');
+        return;
+    }
+
+    // Hide/show nodes based on filters.
+    // Prop values are space-separated (multi-valued). A node matches a filter
+    // if ANY of its values are in the selected set.
+    cy.nodes().forEach(node => {
+        let match = true;
+        for (const propKey of filterKeys) {
+            const raw = node.data(propKey);
+            if (raw == null) { match = false; break; }
+            const nodeVals = String(raw).split(/\s+/);
+            if (!nodeVals.some(v => activeFilters[propKey].has(v))) {
+                match = false;
+                break;
+            }
+        }
+        node.style('display', match ? 'element' : 'none');
     });
 
-    cy.on('mouseout', 'edge', function(evt) {
-        const edge = evt.target;
-        edge.removeClass('hover');
+    // Hide edges where either endpoint is hidden
+    cy.edges().forEach(edge => {
+        const srcVisible = edge.source().style('display') !== 'none';
+        const tgtVisible = edge.target().style('display') !== 'none';
+        edge.style('display', (srcVisible && tgtVisible) ? 'element' : 'none');
     });
+}
+
+// --- Detail Panel ---
+
+function showDetailPanel(node) {
+    const data = node.data();
+    detailName.textContent = data.label || data.id;
+    detailProps.innerHTML = '';
+
+    // Collect all prop_* keys
+    const propKeys = Object.keys(data).filter(k => k.startsWith('prop_'));
+    for (const key of propKeys) {
+        const displayName = key.replace(/^prop_/, '');
+        const value = data[key];
+        if (value == null || value === '') continue;
+
+        const row = document.createElement('div');
+        row.className = 'detail-prop';
+
+        const keySpan = document.createElement('span');
+        keySpan.className = 'detail-prop-key';
+        keySpan.textContent = displayName + ':';
+
+        const valSpan = document.createElement('span');
+        valSpan.className = 'detail-prop-value';
+        valSpan.textContent = String(value).replace(/\s+/g, ', ');
+
+        row.appendChild(keySpan);
+        row.appendChild(valSpan);
+        detailProps.appendChild(row);
+    }
+
+    detailEmpty.style.display = 'none';
+    detailContent.style.display = 'block';
+}
+
+function hideDetailPanel() {
+    detailEmpty.style.display = 'block';
+    detailContent.style.display = 'none';
 }
 
 function applyLayout() {
@@ -293,6 +477,5 @@ function applyLayout() {
         layoutOptions.animationDuration = 500;
     }
 
-    const layout = cy.layout(layoutOptions);
-    layout.run();
+    cy.layout(layoutOptions).run();
 }
