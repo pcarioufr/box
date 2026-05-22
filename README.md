@@ -43,12 +43,23 @@ cp env.example .env   # Add your credentials (Atlassian, Datadog, Snowflake)
 
 # Knowledge Base
 
-Curated knowledge lives in `_knowledge/` folders inside `data/`:
+Each `data/` directory can contain two types of curated context:
 
-- **`data/_knowledge/`** — cross-cutting reference (tool schemas, Slack directory, general domain context)
-- **`data/<project>/_knowledge/`** — initiative-specific knowledge (e.g., `data/detection/_knowledge/`)
+### `_knowledge/` — synthesized understanding
 
-The `/knowledge` skill owns the curation rules: file templates, when to update silently vs. ask first, and explicit review passes. Knowledge files are living documents updated in-place — only distilled insights from pulled documents or explorations belong here, not raw outputs.
+Distilled insights, mental models, decisions and their rationale, stakeholder context, tool schemas. This is *interpreted* context that Claude builds up over time — not raw documents.
+
+- **`data/_knowledge/`** — cross-cutting (Slack directory, general domain, dev environment)
+- **`data/<project>/_knowledge/`** — initiative-specific (e.g., `data/detection/_knowledge/`)
+
+The `/knowledge` skill owns the curation rules: file templates, when to update silently vs. ask first, and explicit review passes. Knowledge files are living documents updated in-place.
+
+### `_reference/` — source documents
+
+Raw documents pulled from external sources (Google Docs, Confluence, specs, FAQs). These are reference material to look up, not synthesized content.
+
+- **`data/_reference/`** — cross-cutting reference documents
+- **`data/<project>/_reference/`** — project-scoped documents (e.g., `data/detection/_reference/`)
 
 
 # Claude Skills
