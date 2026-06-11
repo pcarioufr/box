@@ -9,3 +9,5 @@ Box.code-workspace
 .DS_Store
 
 config/dd-admin.yaml
+
+.claude/settings.json

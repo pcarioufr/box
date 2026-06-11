@@ -7,6 +7,7 @@ This CLI provides tools for:
 """
 
 import argparse
+import os
 import sys
 import logging
 
@@ -52,6 +53,31 @@ def cmd_rum_aggregate(args):
         output_file=args.output,
         working_folder=args.working_folder
     )
+
+
+def cmd_python(args):
+    """Run an arbitrary Python script with the Datadog client pre-configured.
+
+    The script has these globals injected:
+        dd_config   — pre-authenticated Configuration()
+        ApiClient   — datadog_api_client.ApiClient
+    """
+    import sys as _sys
+
+    code = _sys.stdin.read() if args.script == "-" else open(args.script).read()
+
+    from datadog_api_client import ApiClient, Configuration
+    cfg = Configuration()
+    cfg.api_key["apiKeyAuth"] = os.getenv("DD_API_KEY", "")
+    cfg.api_key["appKeyAuth"] = os.getenv("DD_APP_KEY", "")
+    cfg.server_variables["site"] = os.getenv("DD_SITE", "datadoghq.com")
+
+    exec(compile(code, args.script, "exec"), {   # noqa: S102
+        "__builtins__": __builtins__,
+        "dd_config": cfg,
+        "ApiClient": ApiClient,
+        "os": os,
+    })
 
 
 def cmd_notebook_create(args):
@@ -361,6 +387,14 @@ EXAMPLES:
     )
     rum_aggregate_parser.set_defaults(func=cmd_rum_aggregate)
 
+    # ===== PYTHON ESCAPE HATCH =====
+    p = subparsers.add_parser(
+        "python",
+        help="Run arbitrary Python with the Datadog client pre-configured (dd_config, ApiClient injected)",
+    )
+    p.add_argument("script", help="Python script to run, or '-' to read from stdin")
+    p.set_defaults(func=cmd_python)
+
     # ===== NOTEBOOK COMMANDS =====
     notebook_parser = subparsers.add_parser('notebook', help='Notebook commands')
     notebook_subparsers = notebook_parser.add_subparsers(dest='notebook_command', help='Notebook subcommands')
@@ -629,6 +663,10 @@ EXAMPLES:
     # Handle subcommands
     if args.command == 'rum' and not hasattr(args, 'func'):
         rum_parser.print_help()
+        sys.exit(1)
+
+    if args.command == "python" and not hasattr(args, "func"):
+        parser.print_help()
         sys.exit(1)
 
     if args.command == 'notebook' and not hasattr(args, 'func'):

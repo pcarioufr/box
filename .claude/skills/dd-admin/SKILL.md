@@ -18,24 +18,16 @@ The user will provide some combination of:
 - **monitor_id**: Monitor being investigated (numeric)
 - **time range**: When the issue occurred — convert to **UTC ISO 8601** before calling CLI
 - **group query**: Optional group to focus on (e.g., `jet_tenant:de,statuscode:503`)
-- **Monitor Admin URL**: Parse org_id, monitor_id, cluster, time range (from_ts/to_ts are ms timestamps), and group_name from URLs like `https://monitor-admin.eu1.prod.dog/monitors/cluster/realtime/org/{org_id}/monitor/{monitor_id}?from_ts=...&to_ts=...&group_name=...`
+- **Monitor Admin URL**: Parse org_id, monitor_id, cluster, time range (from_ts/to_ts are ms timestamps), and group_name from Monitor Admin URLs.
+- **Watchdog Admin URL**: Parse org_id, bundle_id, and dc from Watchdog alert lifecycle URLs (format: `...watchdog-alert-lifecycle?org_id=<id>&bundle_id=<uuid>&dc=<dc>`).
 
 ## Cluster Derivation
 
-The CLI auto-derives cluster from org_id. Only use `--cluster` to override if the user specifies one.
-
-| Cluster | Org ID Range |
-|---------|-------------|
-| us1 | < 1,000,000,000 |
-| eu1 | 1,000,000,000 – 1,099,999,999 |
-| us1_fed | 1,100,000,000 – 1,199,999,999 |
-| us3 | 1,200,000,000 – 1,299,999,999 |
-| us5 | 1,300,000,000 – 1,399,999,999 |
-| ap1 | >= 1,400,000,000 |
-
-For org_ids >= 1.4B, ask the user to confirm the cluster.
+The CLI auto-derives cluster from org_id using the `org_ranges` mapping in `config/dd-admin.yaml` (gitignored). Only use `--cluster` to override if the user specifies one explicitly.
 
 ## CLI Entry Points
+
+### Monitor investigation
 
 All commands go through `./box.sh dd-admin monitor <subcommand>`:
 
@@ -59,7 +51,52 @@ All commands go through `./box.sh dd-admin monitor <subcommand>`:
 ./box.sh dd-admin monitor downtimes <org_id> <query> [--size 50]
 ```
 
-## Investigation Workflow
+### Watchdog investigation
+
+All commands go through `./box.sh dd-admin watchdog <subcommand>`:
+
+```bash
+# Bundle info — starting point (type, scope, status, signal key)
+./box.sh dd-admin watchdog bundle <org_id> <bundle_id> [--dc <dc>]
+
+# Signal history — anomaly timeline with values vs baseline
+./box.sh dd-admin watchdog signals <org_id> <signal_key> [--dc <dc>]
+```
+
+`--dc` accepts the full datacenter domain (e.g. `us1.prod.dog`). Auto-derived from org_id if omitted.
+`--shadow-name` passes an optional shadow pipeline name for shadow bundle reads.
+
+#### Watchdog investigation workflow
+
+0. **Discovery (if you only have an org_id)**: `watchdog find <org_id> [--status ONGOING] [--hours 24]`
+   - Searches org 2 signal-bundler logs (needs `DD_API_KEY`/`DD_APP_KEY` with `logs_read` scope)
+   - Returns all bundle_ids and signal_keys seen recently for that org — hand off to step 2/3
+1. **Parse the URL** — if given a watchdog-alert-lifecycle URL, extract `org_id`, `bundle_id`, `dc`.
+2. **Get bundle info**: `watchdog bundle <org_id> <bundle_id> --dc <dc>`
+   - Shows type (e.g. `usm_latency_aggregate`), status (`ongoing`/`closed`), scope (service/env/operation/resource), and the **signal key** at the end.
+3. **Get signal history**: `watchdog signals <org_id> <signal_key> --dc <dc>`
+4. **Get full bundle lifecycle** (log-based, no VPN needed): `watchdog history <org_id> <bundle_id>`
+   - Reconstructs the event timeline from signal-bundler audit logs: CREATED → SIGNAL_IN → PROPERTY_CHANGED → CLOSED/EXPIRED
+   - Useful for understanding why a bundle is stuck, when it first appeared, how many signals it absorbed
+   - Shows one line per history entry: timestamp, status, direction, anomaly window, anomalous value vs baseline (with multiplier), and the metric/anomaly queries at the bottom.
+
+#### Key fields
+
+| Field | Meaning |
+|-------|---------|
+| `status_name` | `ongoing` = still active; `closed` = resolved |
+| `type` | Signal family: e.g. `usm_latency_aggregate`, `apm_latency_aggregate` |
+| `direction` | `up` = latency/error spike; `down` = drop |
+| `anomalous_value` vs `baseline_value` | Actual vs expected — multiplier shows severity |
+| `signal_key` | ID to pass to `watchdog signals` |
+
+---
+
+#### Monitor investigation workflow
+
+0. **Discovery (if you only have an org_id)**: `monitor find <org_id> [--hours 24]`
+   - Searches org 2 alerting logs for recent state transitions (needs `DD_API_KEY`/`DD_APP_KEY` with `logs_read` scope)
+   - Returns monitor_ids with transition type and timestamp — hand off to step 1
 
 ### Step 1: Get current monitor state
 Use `monitor state` to understand the current state.

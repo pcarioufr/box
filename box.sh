@@ -48,6 +48,7 @@ usage() {
     echo "  confluence pull|clean    Pull Confluence pages as local markdown"
     echo "  snowflake query          Execute Snowflake SQL queries from files"
     echo "  snowflake discover       Explore Snowflake schemas, tables, and columns"
+    echo "  datadog python <script|->  Run Python with DD client pre-configured (dd_config, ApiClient)"
     echo "  datadog rum query        Query Datadog RUM events"
     echo "  datadog rum aggregate    Aggregate RUM data (top N, time series)"
     echo "  datadog notebook create  Create Datadog notebook from JSON"
@@ -62,6 +63,11 @@ usage() {
     echo "  dd-admin monitor detail  Per-group values, thresholds, margins"
     echo "  dd-admin monitor reevaluate  Re-evaluate with current data"
     echo "  dd-admin monitor downtimes   Search downtimes"
+    echo "  dd-admin watchdog bundle  Get Watchdog bundle info and signal key (VPN required)"
+    echo "  dd-admin watchdog history Full lifecycle timeline from logs (needs DD_API_KEY)"
+    echo "  dd-admin watchdog signals Get Watchdog signal anomaly history"
+    echo "  dd-admin watchdog find    Discover Watchdog bundles for any org (needs DD_API_KEY)"
+    echo "  dd-admin monitor find     Discover monitors with recent transitions (needs DD_API_KEY)"
     echo "  analysis compare         A/B test comparison with statistical tests"
     echo "  analysis analyze         Exploratory analysis with clustering"
     echo ""
@@ -355,6 +361,12 @@ case "$COMMAND" in
     analysis)
         # Statistical analysis for CSV data
         "$SHARED_VENV/bin/python" -m libs.analysis "$@"
+        exit $?
+        ;;
+
+    python)
+        # Run arbitrary Python in the shared venv (.env already loaded by box.sh)
+        "$SHARED_VENV/bin/python" "$@"
         exit $?
         ;;
 

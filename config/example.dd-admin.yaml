@@ -26,3 +26,10 @@ monitor_admin:
   evaluator_pools:
     default: "evaluator-default.namespace.cluster.example.com:6400"
     # 15: "slo-evaluator.namespace.cluster.example.com:6484"
+
+watchdog_admin:
+  # Cluster → datacenter domain for datascience.{dc}/api/v1/ endpoints
+  clusters:
+    us1: us1.example.com
+    eu1: eu1.example.com
+    # Add more clusters as needed

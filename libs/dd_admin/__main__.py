@@ -3,6 +3,7 @@
 
 Subcommands:
   monitor   Debug monitor evaluation via Monitor Admin APIs (VPN-required)
+  watchdog  Debug Watchdog alert lifecycle via Data Science Admin APIs (VPN-required)
 """
 
 import argparse
@@ -17,6 +18,17 @@ from libs.dd_admin.monitor_admin import (
     get_group_payload,
     reevaluate,
     downtime_search,
+)
+from libs.dd_admin.watchdog_admin import (
+    dc_from_cluster,
+    dc_from_org_id,
+    get_bundle,
+    get_signals,
+)
+from libs.dd_admin.log_search import (
+    find_watchdog_bundles,
+    find_monitor_transitions,
+    get_bundle_history,
 )
 
 logging.basicConfig(
@@ -34,6 +46,16 @@ def resolve_cluster(args) -> str:
     cluster = cluster_from_org_id(args.org_id)
     print(f"[auto-derived cluster: {cluster}]", file=sys.stderr)
     return cluster
+
+
+def resolve_dc(args) -> str:
+    """Resolve watchdog dc from explicit flag, dc, or org_id."""
+    if args.dc:
+        return args.dc
+    cluster = args.cluster if args.cluster else cluster_from_org_id(args.org_id)
+    dc = dc_from_cluster(cluster)
+    print(f"[auto-derived dc: {dc}]", file=sys.stderr)
+    return dc
 
 
 def cmd_state(args):
@@ -70,11 +92,50 @@ def cmd_downtimes(args):
     print(downtime_search(cluster, args.org_id, args.query, size=args.size))
 
 
+def cmd_watchdog_bundle(args):
+    dc = resolve_dc(args)
+    print(get_bundle(dc, args.org_id, args.bundle_id, shadow_name=args.shadow_name))
+
+
+def cmd_watchdog_signals(args):
+    dc = resolve_dc(args)
+    print(get_signals(dc, args.org_id, args.signal_key, shadow_name=args.shadow_name))
+
+
+def cmd_watchdog_find(args):
+    print(find_watchdog_bundles(args.org_id, hours=args.hours, status_filter=args.status))
+
+
+def cmd_watchdog_history(args):
+    print(get_bundle_history(args.org_id, args.bundle_id, hours=args.hours))
+
+
+def cmd_monitor_find(args):
+    print(find_monitor_transitions(args.org_id, hours=args.hours))
+
+
 def add_cluster_arg(parser):
     """Add --cluster override to a parser."""
     parser.add_argument(
         "--cluster",
         help="Override auto-derived cluster (default: derived from org_id)",
+    )
+
+
+def add_dc_args(parser):
+    """Add --dc and --cluster override to a watchdog parser."""
+    parser.add_argument(
+        "--dc",
+        help="Override datacenter domain (e.g. us1.prod.dog). Takes precedence over --cluster.",
+    )
+    parser.add_argument(
+        "--cluster",
+        help="Override auto-derived cluster (default: derived from org_id)",
+    )
+    parser.add_argument(
+        "--shadow-name",
+        dest="shadow_name",
+        help="Shadow pipeline name (optional, for shadow bundle reads)",
     )
 
 
@@ -142,6 +203,46 @@ def main():
     add_cluster_arg(p)
     p.set_defaults(func=cmd_downtimes)
 
+    # find (log-based discovery)
+    p = monitor_sub.add_parser("find", help="Find monitors with recent transitions for an org (via org 2 logs, needs DD_API_KEY/DD_APP_KEY)")
+    p.add_argument("org_id", help="Customer organization ID to search for")
+    p.add_argument("--hours", type=int, default=24, help="Look-back window in hours (default: 24)")
+    p.set_defaults(func=cmd_monitor_find)
+
+    # ── watchdog ─────────────────────────────────────────────────────
+    watchdog_parser = subparsers.add_parser(
+        "watchdog", help="Debug Watchdog alert lifecycle (VPN required)",
+    )
+    watchdog_sub = watchdog_parser.add_subparsers(dest="watchdog_command", help="Watchdog subcommands")
+
+    # bundle
+    p = watchdog_sub.add_parser("bundle", help="Get bundle info: scope, status, signal key")
+    p.add_argument("org_id", help="Organization ID")
+    p.add_argument("bundle_id", help="Bundle UUID (from watchdog-alert-lifecycle URL)")
+    add_dc_args(p)
+    p.set_defaults(func=cmd_watchdog_bundle)
+
+    # signals
+    p = watchdog_sub.add_parser("signals", help="Get signal history: anomaly timeline, values vs baseline")
+    p.add_argument("org_id", help="Organization ID")
+    p.add_argument("signal_key", help="Signal key (from 'bundle' output or watchdog-alert-lifecycle URL)")
+    add_dc_args(p)
+    p.set_defaults(func=cmd_watchdog_signals)
+
+    # find (log-based discovery)
+    p = watchdog_sub.add_parser("find", help="Find Watchdog bundles for an org from org 2 logs (needs DD_API_KEY/DD_APP_KEY)")
+    p.add_argument("org_id", help="Customer organization ID to search for")
+    p.add_argument("--hours", type=int, default=24, help="Look-back window in hours (default: 24)")
+    p.add_argument("--status", choices=["ONGOING", "RESOLVED"], help="Filter by bundle status")
+    p.set_defaults(func=cmd_watchdog_find)
+
+    # history (log-based bundle timeline)
+    p = watchdog_sub.add_parser("history", help="Full lifecycle timeline for a bundle from org 2 logs (needs DD_API_KEY/DD_APP_KEY)")
+    p.add_argument("org_id", help="Customer organization ID")
+    p.add_argument("bundle_id", help="Bundle UUID to reconstruct history for")
+    p.add_argument("--hours", type=int, default=48, help="Look-back window in hours (default: 48)")
+    p.set_defaults(func=cmd_watchdog_history)
+
     # ── Parse ────────────────────────────────────────────────────────
     args = parser.parse_args()
 
@@ -151,6 +252,10 @@ def main():
 
     if args.command == "monitor" and not hasattr(args, "func"):
         monitor_parser.print_help()
+        sys.exit(1)
+
+    if args.command == "watchdog" and not hasattr(args, "func"):
+        watchdog_parser.print_help()
         sys.exit(1)
 
     try:
