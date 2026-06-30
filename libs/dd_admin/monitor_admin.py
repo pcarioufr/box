@@ -95,6 +95,14 @@ def api_call(cluster: str, path: str, body: dict) -> dict:
     return resp.json()
 
 
+def _rfc3339(ts: str) -> str:
+    """Ensure a timestamp string is RFC 3339 (protobuf-compatible).
+    Appends Z if no timezone offset is present."""
+    if ts and not (ts.endswith("Z") or "+" in ts[10:] or ts.count("-") > 2):
+        return ts + "Z"
+    return ts
+
+
 def format_status_counts(counts: dict) -> str:
     return ", ".join(
         f"{STATUS_MAP.get(int(k), f'STATUS_{k}')}: {v}"
@@ -144,8 +152,9 @@ def get_results(cluster: str, org_id: str, monitor_id: str, from_ts: str, to_ts:
     """List all evaluations in a time range."""
     from datetime import datetime, timezone
     data = api_call(cluster, "/v1/monitor_results/get_from_timerange", {
-        "from": from_ts, "to": to_ts,
+        "from": _rfc3339(from_ts), "to": _rfc3339(to_ts),
         "monitor_id": monitor_id, "org_id": org_id,
+        "pipeline": "realtime",
     })
     results = data.get("results") or []
     lines = [
@@ -176,7 +185,8 @@ def get_result_detail(
 ) -> str:
     """Get detailed per-group values, thresholds, and margins for one evaluation."""
     data = api_call(cluster, "/v1/monitor_results/get", {
-        "id": result_id, "org_id": org_id, "timestamp": timestamp,
+        "id": result_id, "org_id": org_id, "timestamp": _rfc3339(timestamp),
+        "pipeline": "realtime",
     })
     sched = (data.get("result") or {}).get("scheduling_result") or {}
     eval_result = sched.get("evaluation_result") or {}
@@ -270,9 +280,11 @@ def reevaluate(
     group_filter: str = None,
 ) -> str:
     """Re-evaluate a past result with current data to diagnose late-arriving data."""
+    ts = _rfc3339(timestamp)
     # Fetch original
     original = api_call(cluster, "/v1/monitor_results/get", {
-        "id": result_id, "org_id": org_id, "timestamp": timestamp,
+        "id": result_id, "org_id": org_id, "timestamp": ts,
+        "pipeline": "realtime",
     })
     sched = (original.get("result") or {}).get("scheduling_result") or {}
     monitor_obj = sched.get("monitor")
@@ -285,7 +297,7 @@ def reevaluate(
 
     # Re-evaluate
     reeval = api_call(cluster, "/v1/monitor_results/reevaluate", {
-        "timestamp": timestamp,
+        "timestamp": ts,
         "monitor": monitor_obj,
         "org_id": org_id,
         "evaluator_pool": evaluator_pool,

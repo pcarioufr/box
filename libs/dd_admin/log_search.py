@@ -71,9 +71,10 @@ def _search_logs(query: str, from_ts: datetime, to_ts: datetime, limit: int = 30
                     "attributes": dict(event.attributes.attributes) if (event.attributes and event.attributes.attributes) else {},
                 })
             meta = resp.meta
-            if not meta or not meta.page or not meta.page.after or len(results) >= limit:
+            page = getattr(meta, "page", None) if meta else None
+            if not page or not getattr(page, "after", None) or len(results) >= limit:
                 break
-            cursor = meta.page.after
+            cursor = page.after
 
     return results
 
@@ -172,20 +173,45 @@ _LIFECYCLE = {
 }
 
 
-def get_bundle_history(org_id: str, bundle_id: str, hours: int = 48) -> str:
+_DELTA_FLAGS = ["is_event_worthy", "is_frontend_worthy", "is_wd_story_valid", "is_alert_worthy"]
+
+
+def get_bundle_history(
+    org_id: str,
+    bundle_id: str,
+    hours: int = 48,
+    from_ts: str | None = None,
+    to_ts: str | None = None,
+    verbose: bool = False,
+) -> str:
     """Reconstruct the full lifecycle of a bundle from signal-bundler audit logs."""
     now = datetime.now(timezone.utc)
-    from_ts = now - timedelta(hours=hours)
+    if from_ts:
+        dt_from = datetime.fromisoformat(from_ts.replace("Z", "+00:00")).astimezone(timezone.utc)
+    else:
+        dt_from = now - timedelta(hours=hours)
+    if to_ts:
+        dt_to = datetime.fromisoformat(to_ts.replace("Z", "+00:00")).astimezone(timezone.utc)
+    else:
+        dt_to = now
+
+    window_desc = (
+        f"{dt_from.strftime('%Y-%m-%dT%H:%M:%SZ')} → {dt_to.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+        if from_ts or to_ts
+        else f"last {hours}h"
+    )
 
     # Bundle ID appears in the message description for all its events
     query = f'service:signal-bundler "json_audit_log" @org_id:{org_id} "{bundle_id}"'
 
-    print(f"[searching signal-bundler logs for bundle {bundle_id} (org {org_id}) over last {hours}h...]",
+    print(f"[searching signal-bundler logs for bundle {bundle_id} (org {org_id}), window: {window_desc}...]",
           file=sys.stderr)
-    logs = _search_logs(query, from_ts, now, limit=500)
+    LIMIT = 500
+    logs = _search_logs(query, dt_from, dt_to, limit=LIMIT)
+    hit_cap = len(logs) >= LIMIT
 
     if not logs:
-        return f"No log events found for bundle {bundle_id} (org {org_id}) in the last {hours}h."
+        return f"No log events found for bundle {bundle_id} (org {org_id}) in {window_desc}."
 
     # Parse and sort oldest-first for timeline
     events = []
@@ -218,6 +244,11 @@ def get_bundle_history(org_id: str, bundle_id: str, hours: int = 48) -> str:
             "first_epoch": bundle_snap.get("first_epoch"),
             "last_epoch": bundle_snap.get("last_epoch"),
             "latest_signal_key": bundle_snap.get("latest_signal_key"),
+            "is_event_worthy": bundle_snap.get("is_event_worthy"),
+            "is_frontend_worthy": bundle_snap.get("is_frontend_worthy"),
+            "is_wd_story_valid": bundle_snap.get("is_wd_story_valid"),
+            "is_alert_worthy": bundle_snap.get("is_alert_worthy"),
+            "raw_data": data if verbose else None,
         })
 
     if not events:
@@ -227,11 +258,19 @@ def get_bundle_history(org_id: str, bundle_id: str, hours: int = 48) -> str:
     events.sort(key=lambda e: e["ts"])
 
     lines = [
-        f"Bundle history: {bundle_id}  (org {org_id}, {len(events)} events over last {hours}h)",
+        f"Bundle history: {bundle_id}  (org {org_id}, {len(events)} events, {window_desc})",
         "",
     ]
+    if hit_cap:
+        first_ts = events[0]["ts"] if events else "?"
+        lines.append(
+            f"⚠ {LIMIT}-event cap reached — events before {first_ts} not shown."
+            f" Use --from/--to to target a narrower window."
+        )
+        lines.append("")
 
     prev_status = None
+    prev_flags: dict = {}
     for e in events:
         label = e["label"]
         status = e["status"] or "?"
@@ -245,7 +284,6 @@ def get_bundle_history(org_id: str, bundle_id: str, hours: int = 48) -> str:
             if e.get("latest_signal_key"):
                 line += f"  signal_key={e['latest_signal_key']}"
         elif label == "PROPERTY_CHANGED":
-            # Extract what changed from the description
             changed = e["description"].replace(f"Bundle {bundle_id} has updated property ", "")
             line += f"  {changed}"
         elif label in ("CLOSED", "EXPIRED"):
@@ -254,7 +292,23 @@ def get_bundle_history(org_id: str, bundle_id: str, hours: int = 48) -> str:
         elif label == "CREATED":
             line += f"  type={e['type']}"
 
+        # Delta annotations for key boolean flags — show on first appearance and on change
+        for field in _DELTA_FLAGS:
+            val = e.get(field)
+            if val is None:
+                continue
+            if field not in prev_flags:
+                line += f"  {field}={val}"
+            elif val != prev_flags[field]:
+                line += f"  {field}: {prev_flags[field]}→{val}"
+            prev_flags[field] = val
+
         lines.append(line)
+
+        if verbose and e.get("raw_data"):
+            raw_json = json.dumps(e["raw_data"], default=str, indent=2)
+            lines.append("  " + raw_json.replace("\n", "\n  "))
+            lines.append("")
 
     # Summary
     last = events[-1]

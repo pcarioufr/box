@@ -107,7 +107,13 @@ def cmd_watchdog_find(args):
 
 
 def cmd_watchdog_history(args):
-    print(get_bundle_history(args.org_id, args.bundle_id, hours=args.hours))
+    print(get_bundle_history(
+        args.org_id, args.bundle_id,
+        hours=args.hours,
+        from_ts=getattr(args, "from_ts", None),
+        to_ts=getattr(args, "to_ts", None),
+        verbose=getattr(args, "verbose", False),
+    ))
 
 
 def cmd_monitor_find(args):
@@ -240,7 +246,10 @@ def main():
     p = watchdog_sub.add_parser("history", help="Full lifecycle timeline for a bundle from org 2 logs (needs DD_API_KEY/DD_APP_KEY)")
     p.add_argument("org_id", help="Customer organization ID")
     p.add_argument("bundle_id", help="Bundle UUID to reconstruct history for")
-    p.add_argument("--hours", type=int, default=48, help="Look-back window in hours (default: 48)")
+    p.add_argument("--hours", type=int, default=48, help="Look-back window in hours (default: 48, ignored if --from is set)")
+    p.add_argument("--from", dest="from_ts", help="Start of window (ISO 8601 UTC, e.g. 2026-06-23T08:00:00Z)")
+    p.add_argument("--to", dest="to_ts", help="End of window (ISO 8601 UTC, default: now)")
+    p.add_argument("--verbose", action="store_true", help="Output full raw JSON payload for each event")
     p.set_defaults(func=cmd_watchdog_history)
 
     # ── Parse ────────────────────────────────────────────────────────

@@ -71,14 +71,20 @@ All commands go through `./box.sh dd-admin watchdog <subcommand>`:
 0. **Discovery (if you only have an org_id)**: `watchdog find <org_id> [--status ONGOING] [--hours 24]`
    - Searches org 2 signal-bundler logs (needs `DD_API_KEY`/`DD_APP_KEY` with `logs_read` scope)
    - Returns all bundle_ids and signal_keys seen recently for that org — hand off to step 2/3
+   - Skip this step if the escalation Slack message or ZD ticket contains a Watchdog Admin URL (format `...watchdog-alert-lifecycle?org_id=...&bundle_id=...&dc=...`) — parse bundle_id and dc directly from the URL
 1. **Parse the URL** — if given a watchdog-alert-lifecycle URL, extract `org_id`, `bundle_id`, `dc`.
 2. **Get bundle info**: `watchdog bundle <org_id> <bundle_id> --dc <dc>`
    - Shows type (e.g. `usm_latency_aggregate`), status (`ongoing`/`closed`), scope (service/env/operation/resource), and the **signal key** at the end.
+   - **Always pass `--dc` from the URL** — auto-derived dc (from org_ranges) can be wrong, which causes 500 errors
 3. **Get signal history**: `watchdog signals <org_id> <signal_key> --dc <dc>`
+   - Use the signal_key from `watchdog bundle` output (canonical). The key in `watchdog find` or at the bottom of `watchdog history` is the latest-seen key and may differ for multi-signal bundles.
+   - **`logs_pattern_anomaly` bundles**: signal history likely returns 404 — this signal type is not stored in the datascience endpoint. Use `watchdog history` instead.
 4. **Get full bundle lifecycle** (log-based, no VPN needed): `watchdog history <org_id> <bundle_id>`
    - Reconstructs the event timeline from signal-bundler audit logs: CREATED → SIGNAL_IN → PROPERTY_CHANGED → CLOSED/EXPIRED
    - Useful for understanding why a bundle is stuck, when it first appeared, how many signals it absorbed
-   - Shows one line per history entry: timestamp, status, direction, anomaly window, anomalous value vs baseline (with multiplier), and the metric/anomaly queries at the bottom.
+   - Each line shows: timestamp, event type, status (with transition arrows), and **delta annotations** for key flags — `is_event_worthy`, `is_frontend_worthy`, `is_wd_story_valid`, `is_alert_worthy` are shown on first appearance and whenever they change. A story that shows `is_event_worthy=False` from the CREATED event was never powering monitor alerts, regardless of its status.
+   - **500-event cap**: if the output warns `⚠ 500-event cap reached`, use `--from`/`--to` to target the creation window (e.g. `--from 2026-06-23T08:00:00Z --to 2026-06-23T14:00:00Z`) — the bundler emits ~2 log lines per aggregate, so bundles with many signals fill the cap fast from the start.
+   - **`--verbose`**: dumps the full raw JSON payload for each event — use when a delta view isn't enough and you need to inspect a specific aggregate's payload.
 
 #### Key fields
 
@@ -130,6 +136,7 @@ If the evaluation seems inconsistent (triggered but values look fine, or vice ve
 It re-runs the evaluation with data available *now* and compares to the original. If results differ (`← CHANGED`), late-arriving data is the explanation.
 
 **When to re-evaluate**: any question like "why did it trigger while it looks green?" or "why didn't it trigger while it looks red?" — always re-evaluate before concluding.
+
 
 ## Status Codes
 
